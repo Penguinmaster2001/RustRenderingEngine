@@ -4,6 +4,7 @@ use crate::{
     camera,
     chunk::{
         Chunk,
+        ChunkMesh,
         DrawChunk,
     },
     model::ModelVertex,
@@ -40,6 +41,7 @@ pub struct State
     camera_buffer: wgpu::Buffer,
     camera_bind_group: wgpu::BindGroup,
     chunk: Chunk,
+    chunk_mesh: ChunkMesh,
     pub mouse_pos: PhysicalPosition<f64>,
 }
 
@@ -257,9 +259,11 @@ impl State
         let num_indices = INDICES.len() as u32;
 
         let chunk = Chunk::new();
+        let chunk_mesh = ChunkMesh::from_chunk(&chunk, &renderer);
 
         Ok(Self {
             chunk,
+            chunk_mesh,
             renderer,
             render_pipeline,
             vertex_buffer,
@@ -356,7 +360,7 @@ impl State
             render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
             render_pass.draw_indexed(0..self.num_indices, 0, 0..1);
 
-            render_pass.draw_chunk(&self.chunk, &self.renderer);
+            render_pass.draw_chunk(&self.chunk_mesh);
         }
 
         self.renderer

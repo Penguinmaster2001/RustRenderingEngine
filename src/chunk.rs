@@ -1,6 +1,3 @@
-use cgmath::Vector3;
-use wgpu::util::DeviceExt;
-
 use crate::{
     blocks::{
         BLOCK_SIZE,
@@ -9,6 +6,8 @@ use crate::{
     rendering::Renderer,
     vertex::TextureVertex,
 };
+use cgmath::Vector3;
+use wgpu::util::DeviceExt;
 
 
 
@@ -20,10 +19,16 @@ const CHUNK_BLOCK_COUNT: usize = CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE;
 pub struct Chunk
 {
     blocks: [Block; CHUNK_BLOCK_COUNT],
-    vertices: Vec<TextureVertex>,
-    indices: Vec<u32>,
 }
 
+
+
+pub struct ChunkMesh
+{
+    vertex_buffer: wgpu::Buffer,
+    index_buffer: wgpu::Buffer,
+    index_count: u32,
+}
 
 
 fn generate_vertices() -> (Vec<TextureVertex>, Vec<u32>)
@@ -127,13 +132,7 @@ impl Chunk
     {
         let blocks = [Block::new(1); CHUNK_BLOCK_COUNT];
 
-        let (vertices, indices) = generate_vertices();
-
-        Self {
-            blocks,
-            vertices,
-            indices,
-        }
+        Self { blocks }
     }
 
 
@@ -143,13 +142,37 @@ impl Chunk
         self.blocks
             [((x as usize) * CHUNK_SIZE * CHUNK_SIZE) + ((y as usize) * CHUNK_SIZE) + (z as usize)]
     }
+}
 
 
 
-    fn block_at_array(blocks: [Block; CHUNK_BLOCK_COUNT], x: u16, y: u16, z: u16) -> Block
+impl ChunkMesh
+{
+    pub fn from_chunk(chunk: &Chunk, renderer: &Renderer) -> Self
     {
-        blocks
-            [((x as usize) * CHUNK_SIZE * CHUNK_SIZE) + ((y as usize) * CHUNK_SIZE) + (z as usize)]
+        let (vertices, indices) = generate_vertices();
+
+        let vertex_buffer = renderer
+            .device
+            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("chunk Vertex Buffer"),
+                contents: bytemuck::cast_slice(&vertices),
+                usage: wgpu::BufferUsages::VERTEX,
+            });
+
+        let index_buffer = renderer
+            .device
+            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("chunk Index Buffer"),
+                contents: bytemuck::cast_slice(&indices),
+                usage: wgpu::BufferUsages::INDEX,
+            });
+
+        Self {
+            vertex_buffer,
+            index_buffer,
+            index_count: indices.len() as _,
+        }
     }
 }
 
@@ -157,7 +180,7 @@ impl Chunk
 
 pub trait DrawChunk<'a>
 {
-    fn draw_chunk(&mut self, chunk: &'a Chunk, renderer: &Renderer);
+    fn draw_chunk(&mut self, chunk_mesh: &ChunkMesh);
 }
 
 
@@ -166,25 +189,10 @@ impl<'a, 'b> DrawChunk<'b> for wgpu::RenderPass<'a>
 where
     'b: 'a,
 {
-    fn draw_chunk(&mut self, chunk: &Chunk, renderer: &Renderer)
+    fn draw_chunk(&mut self, chunk_mesh: &ChunkMesh)
     {
-        let vertex_buffer = renderer
-            .device
-            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("chunk Vertex Buffer"),
-                contents: bytemuck::cast_slice(&chunk.vertices),
-                usage: wgpu::BufferUsages::VERTEX,
-            });
-        let index_buffer = renderer
-            .device
-            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("chunk Index Buffer"),
-                contents: bytemuck::cast_slice(&chunk.indices),
-                usage: wgpu::BufferUsages::INDEX,
-            });
-
-        self.set_vertex_buffer(0, vertex_buffer.slice(..));
-        self.set_index_buffer(index_buffer.slice(..), wgpu::IndexFormat::Uint32);
-        self.draw_indexed(0..chunk.indices.len() as u32, 0, 0..1);
+        self.set_vertex_buffer(0, chunk_mesh.vertex_buffer.slice(..));
+        self.set_index_buffer(chunk_mesh.index_buffer.slice(..), wgpu::IndexFormat::Uint32);
+        self.draw_indexed(0..chunk_mesh.index_count, 0, 0..1);
     }
 }
