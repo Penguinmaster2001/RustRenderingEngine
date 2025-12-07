@@ -1,4 +1,19 @@
-use cgmath::prelude::*;
+use crate::{
+    INDICES,
+    VERTICES,
+    camera,
+    chunk::{
+        Chunk,
+        DrawChunk,
+    },
+    model::ModelVertex,
+    rendering::Renderer,
+    texture::{
+        self,
+        Texture,
+    },
+    vertex::Vertex,
+};
 use std::sync::Arc;
 use wgpu::util::DeviceExt;
 use winit::{
@@ -6,29 +21,6 @@ use winit::{
     event_loop::ActiveEventLoop,
     keyboard::KeyCode,
     window::Window,
-};
-
-use crate::{
-    INDICES,
-    NUM_INSTANCES_PER_ROW,
-    VERTICES,
-    camera,
-    instance::{
-        Instance,
-        InstanceRaw,
-    },
-    model::{
-        DrawModel,
-        Model,
-        ModelVertex,
-    },
-    rendering::Renderer,
-    resources,
-    texture::{
-        self,
-        Texture,
-    },
-    vertex::Vertex,
 };
 
 
@@ -40,16 +32,14 @@ pub struct State
     vertex_buffer: wgpu::Buffer,
     index_buffer: wgpu::Buffer,
     num_indices: u32,
-    // instances: Vec<Instance>,
-    // instance_buffer: wgpu::Buffer,
     diffuse_bind_group: wgpu::BindGroup,
-    diffuse_texture: Texture,
     depth_texture: Texture,
     camera: camera::Camera,
     camera_controller: camera::CameraController,
     camera_uniform: camera::CameraUniform,
     camera_buffer: wgpu::Buffer,
     camera_bind_group: wgpu::BindGroup,
+    chunk: Chunk,
     pub mouse_pos: PhysicalPosition<f64>,
 }
 
@@ -266,52 +256,16 @@ impl State
             });
         let num_indices = INDICES.len() as u32;
 
-        // const SPACE_BETWEEN: f32 = 3.0;
-        // let instances = (0..NUM_INSTANCES_PER_ROW)
-        //     .flat_map(|z| {
-        //         (0..NUM_INSTANCES_PER_ROW).map(move |x| {
-        //             let x = SPACE_BETWEEN * (x as f32 - NUM_INSTANCES_PER_ROW as f32 / 2.0);
-        //             let z = SPACE_BETWEEN * (z as f32 - NUM_INSTANCES_PER_ROW as f32 / 2.0);
-
-        //             let position = cgmath::Vector3 { x, y: 0.0, z };
-
-        //             let rotation = if position.is_zero()
-        //             {
-        //                 cgmath::Quaternion::from_axis_angle(
-        //                     cgmath::Vector3::unit_z(),
-        //                     cgmath::Deg(0.0),
-        //                 )
-        //             }
-        //             else
-        //             {
-        //                 cgmath::Quaternion::from_axis_angle(position.normalize(), cgmath::Deg(45.0))
-        //             };
-
-        //             Instance { position, rotation }
-        //         })
-        //     })
-        //     .collect::<Vec<_>>();
-
-        // let instance_data = instances.iter().map(Instance::to_raw).collect::<Vec<_>>();
-        // let instance_buffer =
-        //     renderer
-        //         .device
-        //         .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-        //             label: Some("Instance Buffer"),
-        //             contents: bytemuck::cast_slice(&instance_data),
-        //             usage: wgpu::BufferUsages::VERTEX,
-        //         });
+        let chunk = Chunk::new();
 
         Ok(Self {
+            chunk,
             renderer,
             render_pipeline,
             vertex_buffer,
             index_buffer,
             num_indices,
-            // instances,
-            // instance_buffer,
             diffuse_bind_group,
-            diffuse_texture,
             depth_texture,
             camera,
             camera_controller,
@@ -398,12 +352,11 @@ impl State
             render_pass.set_bind_group(1, &self.camera_bind_group, &[]);
 
             render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
-            // render_pass.set_vertex_buffer(1, self.instance_buffer.slice(..));
 
             render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
             render_pass.draw_indexed(0..self.num_indices, 0, 0..1);
 
-            // render_pass.draw_indexed(0..self.num_indices, 0, 0..self.instances.len() as _);
+            render_pass.draw_chunk(&self.chunk, &self.renderer);
         }
 
         self.renderer

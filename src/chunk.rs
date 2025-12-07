@@ -6,6 +6,7 @@ use crate::{
         BLOCK_SIZE,
         Block,
     },
+    rendering::Renderer,
     vertex::TextureVertex,
 };
 
@@ -20,12 +21,12 @@ pub struct Chunk
 {
     blocks: [Block; CHUNK_BLOCK_COUNT],
     vertices: Vec<TextureVertex>,
-    indices: Vec<u16>,
+    indices: Vec<u32>,
 }
 
 
 
-fn generate_vertices() -> (Vec<TextureVertex>, Vec<u16>)
+fn generate_vertices() -> (Vec<TextureVertex>, Vec<u32>)
 {
     let mut verts = vec![];
     let mut indices = vec![];
@@ -42,7 +43,7 @@ fn generate_vertices() -> (Vec<TextureVertex>, Vec<u16>)
                     z as f32 * BLOCK_SIZE,
                 );
 
-                let index = verts.len() as u16;
+                let index = verts.len() as u32;
 
                 verts.push(TextureVertex {
                     position: [offset.x, offset.y, offset.z],
@@ -156,12 +157,7 @@ impl Chunk
 
 pub trait DrawChunk<'a>
 {
-    fn draw_chunk(
-        &mut self,
-        chunk: &'a Chunk,
-        camera_bind_group: &'a wgpu::BindGroup,
-        device: &wgpu::Device,
-    );
+    fn draw_chunk(&mut self, chunk: &'a Chunk, renderer: &Renderer);
 }
 
 
@@ -170,27 +166,25 @@ impl<'a, 'b> DrawChunk<'b> for wgpu::RenderPass<'a>
 where
     'b: 'a,
 {
-    fn draw_chunk(
-        &mut self,
-        chunk: &'b Chunk,
-        camera_bind_group: &'b wgpu::BindGroup,
-        device: &wgpu::Device,
-    )
+    fn draw_chunk(&mut self, chunk: &Chunk, renderer: &Renderer)
     {
-        let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("chunk Vertex Buffer"),
-            contents: bytemuck::cast_slice(&chunk.vertices),
-            usage: wgpu::BufferUsages::VERTEX,
-        });
-        let index_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("chunk Index Buffer"),
-            contents: bytemuck::cast_slice(&chunk.indices),
-            usage: wgpu::BufferUsages::INDEX,
-        });
+        let vertex_buffer = renderer
+            .device
+            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("chunk Vertex Buffer"),
+                contents: bytemuck::cast_slice(&chunk.vertices),
+                usage: wgpu::BufferUsages::VERTEX,
+            });
+        let index_buffer = renderer
+            .device
+            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("chunk Index Buffer"),
+                contents: bytemuck::cast_slice(&chunk.indices),
+                usage: wgpu::BufferUsages::INDEX,
+            });
 
         self.set_vertex_buffer(0, vertex_buffer.slice(..));
         self.set_index_buffer(index_buffer.slice(..), wgpu::IndexFormat::Uint32);
-        self.set_bind_group(1, camera_bind_group, &[]);
         self.draw_indexed(0..chunk.indices.len() as u32, 0, 0..1);
     }
 }

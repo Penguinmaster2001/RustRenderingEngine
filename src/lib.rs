@@ -10,7 +10,9 @@ use winit::{
 
 
 pub mod app;
+pub mod blocks;
 pub mod camera;
+pub mod chunk;
 pub mod instance;
 pub mod model;
 pub mod rendering;
@@ -18,15 +20,6 @@ pub mod resources;
 pub mod state;
 pub mod texture;
 pub mod vertex;
-
-
-
-const NUM_INSTANCES_PER_ROW: u32 = 10;
-const INSTANCE_DISPLACEMENT: cgmath::Vector3<f32> = cgmath::Vector3::new(
-    NUM_INSTANCES_PER_ROW as f32 * 0.5,
-    0.0,
-    NUM_INSTANCES_PER_ROW as f32 * 0.5,
-);
 
 
 
