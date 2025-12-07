@@ -40,8 +40,8 @@ pub struct State
     vertex_buffer: wgpu::Buffer,
     index_buffer: wgpu::Buffer,
     num_indices: u32,
-    instances: Vec<Instance>,
-    instance_buffer: wgpu::Buffer,
+    // instances: Vec<Instance>,
+    // instance_buffer: wgpu::Buffer,
     diffuse_bind_group: wgpu::BindGroup,
     diffuse_texture: Texture,
     depth_texture: Texture,
@@ -50,7 +50,6 @@ pub struct State
     camera_uniform: camera::CameraUniform,
     camera_buffer: wgpu::Buffer,
     camera_bind_group: wgpu::BindGroup,
-    obj_model: Model,
     pub mouse_pos: PhysicalPosition<f64>,
 }
 
@@ -69,7 +68,7 @@ impl State
             diffuse_bytes,
             "schmob.jpeg",
         )
-        .unwrap(); // CHANGED!
+        .unwrap();
 
         let texture_bind_group_layout =
             renderer
@@ -202,7 +201,7 @@ impl State
                     vertex: wgpu::VertexState {
                         module: &shader,
                         entry_point: Some("vs_main"), // 1.
-                        buffers: &[ModelVertex::desc(), InstanceRaw::desc()], // 2.
+                        buffers: &[ModelVertex::desc() /* InstanceRaw::desc() */], // 2.
                         compilation_options: wgpu::PipelineCompilationOptions::default(),
                     },
 
@@ -267,50 +266,41 @@ impl State
             });
         let num_indices = INDICES.len() as u32;
 
-        let obj_model = resources::load_model(
-            "cube.obj",
-            &renderer.device,
-            &renderer.queue,
-            &texture_bind_group_layout,
-        )
-        .await
-        .unwrap();
+        // const SPACE_BETWEEN: f32 = 3.0;
+        // let instances = (0..NUM_INSTANCES_PER_ROW)
+        //     .flat_map(|z| {
+        //         (0..NUM_INSTANCES_PER_ROW).map(move |x| {
+        //             let x = SPACE_BETWEEN * (x as f32 - NUM_INSTANCES_PER_ROW as f32 / 2.0);
+        //             let z = SPACE_BETWEEN * (z as f32 - NUM_INSTANCES_PER_ROW as f32 / 2.0);
 
-        const SPACE_BETWEEN: f32 = 3.0;
-        let instances = (0..NUM_INSTANCES_PER_ROW)
-            .flat_map(|z| {
-                (0..NUM_INSTANCES_PER_ROW).map(move |x| {
-                    let x = SPACE_BETWEEN * (x as f32 - NUM_INSTANCES_PER_ROW as f32 / 2.0);
-                    let z = SPACE_BETWEEN * (z as f32 - NUM_INSTANCES_PER_ROW as f32 / 2.0);
+        //             let position = cgmath::Vector3 { x, y: 0.0, z };
 
-                    let position = cgmath::Vector3 { x, y: 0.0, z };
+        //             let rotation = if position.is_zero()
+        //             {
+        //                 cgmath::Quaternion::from_axis_angle(
+        //                     cgmath::Vector3::unit_z(),
+        //                     cgmath::Deg(0.0),
+        //                 )
+        //             }
+        //             else
+        //             {
+        //                 cgmath::Quaternion::from_axis_angle(position.normalize(), cgmath::Deg(45.0))
+        //             };
 
-                    let rotation = if position.is_zero()
-                    {
-                        cgmath::Quaternion::from_axis_angle(
-                            cgmath::Vector3::unit_z(),
-                            cgmath::Deg(0.0),
-                        )
-                    }
-                    else
-                    {
-                        cgmath::Quaternion::from_axis_angle(position.normalize(), cgmath::Deg(45.0))
-                    };
+        //             Instance { position, rotation }
+        //         })
+        //     })
+        //     .collect::<Vec<_>>();
 
-                    Instance { position, rotation }
-                })
-            })
-            .collect::<Vec<_>>();
-
-        let instance_data = instances.iter().map(Instance::to_raw).collect::<Vec<_>>();
-        let instance_buffer =
-            renderer
-                .device
-                .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                    label: Some("Instance Buffer"),
-                    contents: bytemuck::cast_slice(&instance_data),
-                    usage: wgpu::BufferUsages::VERTEX,
-                });
+        // let instance_data = instances.iter().map(Instance::to_raw).collect::<Vec<_>>();
+        // let instance_buffer =
+        //     renderer
+        //         .device
+        //         .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        //             label: Some("Instance Buffer"),
+        //             contents: bytemuck::cast_slice(&instance_data),
+        //             usage: wgpu::BufferUsages::VERTEX,
+        //         });
 
         Ok(Self {
             renderer,
@@ -318,8 +308,8 @@ impl State
             vertex_buffer,
             index_buffer,
             num_indices,
-            instances,
-            instance_buffer,
+            // instances,
+            // instance_buffer,
             diffuse_bind_group,
             diffuse_texture,
             depth_texture,
@@ -328,7 +318,6 @@ impl State
             camera_uniform,
             camera_buffer,
             camera_bind_group,
-            obj_model,
             mouse_pos: PhysicalPosition { x: 0.0, y: 0.0 },
         })
     }
@@ -403,30 +392,18 @@ impl State
                 timestamp_writes: None,
             });
 
-            // render_pass.set_pipeline(&self.render_pipeline);
-
-            // render_pass.set_bind_group(0, &self.diffuse_bind_group, &[]);
-            // render_pass.set_bind_group(1, &self.camera_bind_group, &[]);
-
-            // render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
-            // render_pass.set_vertex_buffer(1, self.instance_buffer.slice(..));
-
-            // render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
-
-            // render_pass.draw_indexed(0..self.num_indices, 0, 0..self.instances.len() as _);
-
-            render_pass.set_vertex_buffer(1, self.instance_buffer.slice(..));
-
             render_pass.set_pipeline(&self.render_pipeline);
 
-            let mesh = &self.obj_model.meshes[0];
-            let material = &self.obj_model.materials[mesh.material];
-            render_pass.draw_mesh_instanced(
-                mesh,
-                material,
-                0..self.instances.len() as u32,
-                &self.camera_bind_group,
-            );
+            render_pass.set_bind_group(0, &self.diffuse_bind_group, &[]);
+            render_pass.set_bind_group(1, &self.camera_bind_group, &[]);
+
+            render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
+            // render_pass.set_vertex_buffer(1, self.instance_buffer.slice(..));
+
+            render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
+            render_pass.draw_indexed(0..self.num_indices, 0, 0..1);
+
+            // render_pass.draw_indexed(0..self.num_indices, 0, 0..self.instances.len() as _);
         }
 
         self.renderer
