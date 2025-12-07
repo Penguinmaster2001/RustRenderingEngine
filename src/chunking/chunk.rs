@@ -65,7 +65,7 @@ impl Chunk
         match self.block_at(x, y, z)
         {
             None => false,
-            Some(b) => b.block_type == BlockType::Full,
+            Some(b) => b.block_type != BlockType::Empty,
         }
     }
 }

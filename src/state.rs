@@ -15,7 +15,10 @@ use crate::{
         self,
         Texture,
     },
-    vertex::Vertex,
+    vertex::{
+        TextureVertex,
+        Vertex,
+    },
 };
 use std::sync::Arc;
 use wgpu::util::DeviceExt;
@@ -195,7 +198,7 @@ impl State
                     vertex: wgpu::VertexState {
                         module: &shader,
                         entry_point: Some("vs_main"), // 1.
-                        buffers: &[ModelVertex::desc() /* InstanceRaw::desc() */], // 2.
+                        buffers: &[TextureVertex::desc() /* InstanceRaw::desc() */], // 2.
                         compilation_options: wgpu::PipelineCompilationOptions::default(),
                     },
 
@@ -216,7 +219,7 @@ impl State
                         topology: wgpu::PrimitiveTopology::TriangleList, // 1.
                         strip_index_format: None,
                         front_face: wgpu::FrontFace::Ccw, // 2.
-                        cull_mode: Some(wgpu::Face::Back),
+                        cull_mode: None,                  // Some(wgpu::Face::Back),
                         // Setting this to anything other than Fill requires Features::NON_FILL_POLYGON_MODE
                         polygon_mode: wgpu::PolygonMode::Fill,
                         // Requires Features::DEPTH_CLIP_CONTROL

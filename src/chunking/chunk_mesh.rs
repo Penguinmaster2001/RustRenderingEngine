@@ -16,7 +16,7 @@ use wgpu::util::DeviceExt;
 
 fn vert_index(x: u8, y: u8, z: u8) -> u32
 {
-    ((((x as u32) * CHUNK_SIZE as u32) + y as u32) * CHUNK_SIZE as u32) + z as u32
+    ((((x as u32) * (CHUNK_SIZE + 1) as u32) + y as u32) * (CHUNK_SIZE + 1) as u32) + z as u32
 }
 
 
@@ -42,11 +42,11 @@ fn generate_indices(chunk: &Chunk) -> Vec<u32>
 {
     let mut indices = vec![];
 
-    for x in 0..(CHUNK_SIZE + 1)
+    for x in 0..CHUNK_SIZE
     {
-        for y in 0..(CHUNK_SIZE + 1)
+        for y in 0..CHUNK_SIZE
         {
-            for z in 0..(CHUNK_SIZE + 1)
+            for z in 0..CHUNK_SIZE
             {
                 generate_faces(x, y, z, chunk, &mut indices);
             }
