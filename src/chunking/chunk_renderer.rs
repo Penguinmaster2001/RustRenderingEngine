@@ -1,12 +1,7 @@
-use crate::chunking::blocks::BLOCK_SIZE;
 use crate::chunking::chunk_mesh::ChunkMesh;
 use crate::{
-    chunking::chunk::{
-        CHUNK_SIZE,
-        ChunkContainer,
-    },
+    chunking::chunk::ChunkContainer,
     rendering::Renderer,
-    vertex::TextureVertex,
 };
 use cgmath::Vector3;
 use std::collections::HashMap;

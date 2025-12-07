@@ -16,7 +16,19 @@ pub const BLOCK_SIZE: f32 = 1.0;
 
 
 
-#[derive(Clone, Copy)]
+pub enum BlockFaces
+{
+    Front,
+    Back,
+    Left,
+    Right,
+    Top,
+    Bottom,
+}
+
+
+
+#[derive(Clone, Copy, PartialEq)]
 pub enum BlockType
 {
     Empty,

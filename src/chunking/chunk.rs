@@ -7,14 +7,14 @@ use std::collections::HashMap;
 
 
 
-pub const CHUNK_SIZE: usize = 6;
-pub const CHUNK_BLOCK_COUNT: usize = CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE;
+pub const CHUNK_SIZE: u8 = 8;
+pub const CHUNK_BLOCK_COUNT: u32 = CHUNK_SIZE as u32 * CHUNK_SIZE as u32 * CHUNK_SIZE as u32;
 
 
 
 pub struct Chunk
 {
-    blocks: [Block; CHUNK_BLOCK_COUNT],
+    blocks: [Block; CHUNK_BLOCK_COUNT as usize],
 }
 
 
@@ -43,16 +43,29 @@ impl Chunk
 {
     pub fn new() -> Self
     {
-        let blocks = [Block::new(BlockType::Full); CHUNK_BLOCK_COUNT];
+        let blocks = [Block::new(BlockType::Full); CHUNK_BLOCK_COUNT as usize];
 
         Self { blocks }
     }
 
 
 
-    pub fn block_at(&self, x: u16, y: u16, z: u16) -> Block
+    pub fn block_at(&self, x: u8, y: u8, z: u8) -> Option<&Block>
     {
-        self.blocks
-            [((x as usize) * CHUNK_SIZE * CHUNK_SIZE) + ((y as usize) * CHUNK_SIZE) + (z as usize)]
+        self.blocks.get(
+            ((((x as usize) * CHUNK_SIZE as usize) + y as usize) * CHUNK_SIZE as usize)
+                + z as usize,
+        )
+    }
+
+
+
+    pub fn block_is_solid(&self, x: u8, y: u8, z: u8) -> bool
+    {
+        match self.block_at(x, y, z)
+        {
+            None => false,
+            Some(b) => b.block_type == BlockType::Full,
+        }
     }
 }

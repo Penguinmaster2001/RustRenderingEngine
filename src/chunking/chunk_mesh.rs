@@ -14,16 +14,59 @@ use wgpu::util::DeviceExt;
 
 
 
-fn generate_vertices(chunk: &Chunk) -> (Vec<TextureVertex>, Vec<u32>)
+fn vert_index(x: u8, y: u8, z: u8) -> u32
 {
-    let mut verts = vec![];
+    ((((x as u32) * CHUNK_SIZE as u32) + y as u32) * CHUNK_SIZE as u32) + z as u32
+}
+
+
+
+fn generate_faces(x: u8, y: u8, z: u8, chunk: &Chunk, indices: &mut Vec<u32>)
+{
+    if chunk.block_is_solid(x, y, z)
+    {
+        // Front Face
+        indices.push(vert_index(x + 0, y + 0, z + 0));
+        indices.push(vert_index(x + 1, y + 0, z + 0));
+        indices.push(vert_index(x + 1, y + 0, z + 1));
+
+        indices.push(vert_index(x + 0, y + 0, z + 0));
+        indices.push(vert_index(x + 1, y + 0, z + 1));
+        indices.push(vert_index(x + 0, y + 0, z + 1));
+    }
+}
+
+
+
+fn generate_indices(chunk: &Chunk) -> Vec<u32>
+{
     let mut indices = vec![];
 
-    for x in 0..CHUNK_SIZE
+    for x in 0..(CHUNK_SIZE + 1)
     {
-        for y in 0..CHUNK_SIZE
+        for y in 0..(CHUNK_SIZE + 1)
         {
-            for z in 0..CHUNK_SIZE
+            for z in 0..(CHUNK_SIZE + 1)
+            {
+                generate_faces(x, y, z, chunk, &mut indices);
+            }
+        }
+    }
+
+    indices
+}
+
+
+
+fn generate_vertices() -> Vec<TextureVertex>
+{
+    let mut verts = vec![];
+
+    for x in 0..(CHUNK_SIZE + 1)
+    {
+        for y in 0..(CHUNK_SIZE + 1)
+        {
+            for z in 0..(CHUNK_SIZE + 1)
             {
                 let offset = Vector3::new(
                     x as f32 * BLOCK_SIZE,
@@ -31,80 +74,15 @@ fn generate_vertices(chunk: &Chunk) -> (Vec<TextureVertex>, Vec<u32>)
                     z as f32 * BLOCK_SIZE,
                 );
 
-                let index = verts.len() as u32;
-
                 verts.push(TextureVertex {
                     position: [offset.x, offset.y, offset.z],
                     tex_coords: [0.0, 0.0],
                 });
-
-                verts.push(TextureVertex {
-                    position: [offset.x, offset.y, offset.z + BLOCK_SIZE],
-                    tex_coords: [0.0, 0.0],
-                });
-
-                verts.push(TextureVertex {
-                    position: [offset.x, offset.y + BLOCK_SIZE, offset.z],
-                    tex_coords: [0.0, 0.0],
-                });
-
-                verts.push(TextureVertex {
-                    position: [offset.x, offset.y + BLOCK_SIZE, offset.z + BLOCK_SIZE],
-                    tex_coords: [0.0, 0.0],
-                });
-
-                verts.push(TextureVertex {
-                    position: [offset.x + BLOCK_SIZE, offset.y, offset.z],
-                    tex_coords: [0.0, 0.0],
-                });
-
-                verts.push(TextureVertex {
-                    position: [offset.x + BLOCK_SIZE, offset.y, offset.z + BLOCK_SIZE],
-                    tex_coords: [0.0, 0.0],
-                });
-
-                verts.push(TextureVertex {
-                    position: [offset.x + BLOCK_SIZE, offset.y + BLOCK_SIZE, offset.z],
-                    tex_coords: [0.0, 0.0],
-                });
-
-                verts.push(TextureVertex {
-                    position: [
-                        offset.x + BLOCK_SIZE,
-                        offset.y + BLOCK_SIZE,
-                        offset.z + BLOCK_SIZE,
-                    ],
-                    tex_coords: [0.0, 0.0],
-                });
-
-                indices.push(index + 0);
-                indices.push(index + 4);
-                indices.push(index + 6);
-
-                indices.push(index + 0);
-                indices.push(index + 6);
-                indices.push(index + 2);
-
-                indices.push(index + 4);
-                indices.push(index + 5);
-                indices.push(index + 7);
-
-                indices.push(index + 4);
-                indices.push(index + 7);
-                indices.push(index + 6);
-
-                indices.push(index + 1);
-                indices.push(index + 5);
-                indices.push(index + 4);
-
-                indices.push(index + 1);
-                indices.push(index + 4);
-                indices.push(index + 0);
             }
         }
     }
 
-    (verts, indices)
+    verts
 }
 
 
@@ -122,7 +100,7 @@ impl ChunkMesh
 {
     pub fn from_chunk(chunk: &Chunk, renderer: &Renderer) -> Self
     {
-        let (vertices, indices) = generate_vertices(chunk);
+        let vertices = generate_vertices();
 
         let vertex_buffer = renderer
             .device
@@ -131,6 +109,8 @@ impl ChunkMesh
                 contents: bytemuck::cast_slice(&vertices),
                 usage: wgpu::BufferUsages::VERTEX,
             });
+
+        let indices = generate_indices(chunk);
 
         let index_buffer = renderer
             .device
