@@ -13,6 +13,7 @@ pub mod app;
 pub mod camera;
 pub mod instance;
 pub mod model;
+pub mod rendering;
 pub mod resources;
 pub mod state;
 pub mod texture;
