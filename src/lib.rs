@@ -10,9 +10,8 @@ use winit::{
 
 
 pub mod app;
-pub mod blocks;
 pub mod camera;
-pub mod chunk;
+pub mod chunking;
 pub mod instance;
 pub mod model;
 pub mod rendering;

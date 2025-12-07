@@ -2,10 +2,12 @@ use crate::{
     INDICES,
     VERTICES,
     camera,
-    chunk::{
-        Chunk,
-        ChunkMesh,
-        DrawChunk,
+    chunking::{
+        chunk::ChunkContainer,
+        chunk_renderer::{
+            ChunkRenderer,
+            DrawChunks,
+        },
     },
     model::ModelVertex,
     rendering::Renderer,
@@ -40,8 +42,8 @@ pub struct State
     camera_uniform: camera::CameraUniform,
     camera_buffer: wgpu::Buffer,
     camera_bind_group: wgpu::BindGroup,
-    chunk: Chunk,
-    chunk_mesh: ChunkMesh,
+    chunks: ChunkContainer,
+    chunk_renderer: ChunkRenderer,
     pub mouse_pos: PhysicalPosition<f64>,
 }
 
@@ -258,12 +260,13 @@ impl State
             });
         let num_indices = INDICES.len() as u32;
 
-        let chunk = Chunk::new();
-        let chunk_mesh = ChunkMesh::from_chunk(&chunk, &renderer);
+        let chunks = ChunkContainer::new();
+
+        let chunk_renderer = ChunkRenderer::from_chunk_container(&chunks, &renderer);
 
         Ok(Self {
-            chunk,
-            chunk_mesh,
+            chunks,
+            chunk_renderer,
             renderer,
             render_pipeline,
             vertex_buffer,
@@ -360,7 +363,7 @@ impl State
             render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
             render_pass.draw_indexed(0..self.num_indices, 0, 0..1);
 
-            render_pass.draw_chunk(&self.chunk_mesh);
+            render_pass.draw_chunks(&self.chunk_renderer);
         }
 
         self.renderer
