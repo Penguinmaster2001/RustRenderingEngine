@@ -29,7 +29,10 @@ use winit::{
     },
     event_loop::ActiveEventLoop,
     keyboard::KeyCode,
-    window::Window,
+    window::{
+        CursorGrabMode,
+        Window,
+    },
 };
 
 
@@ -61,7 +64,9 @@ impl State
 {
     pub async fn new(window: Arc<Window>) -> anyhow::Result<Self>
     {
-        let renderer = Renderer::new(window).await?;
+        let renderer = Renderer::new(window.clone()).await?;
+
+        window.set_cursor_grab(CursorGrabMode::Locked)?;
 
         let diffuse_bytes = include_bytes!("schmob.jpeg");
         let diffuse_texture = texture::Texture::from_bytes(
@@ -131,7 +136,7 @@ impl State
             0.01,
             1000.0,
         );
-        let camera_controller = camera::CameraController::new(10.0, 1.0);
+        let camera_controller = camera::CameraController::new(25.0, 2.0);
 
         let mut camera_uniform = camera::CameraUniform::new();
         camera_uniform.update_view_proj(&camera, &projection);
