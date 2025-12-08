@@ -9,7 +9,6 @@ use crate::{
             DrawChunks,
         },
     },
-    model::ModelVertex,
     rendering::Renderer,
     texture::{
         self,
@@ -219,7 +218,7 @@ impl State
                         topology: wgpu::PrimitiveTopology::TriangleList, // 1.
                         strip_index_format: None,
                         front_face: wgpu::FrontFace::Ccw, // 2.
-                        cull_mode: None,                  //Some(wgpu::Face::Back),
+                        cull_mode: Some(wgpu::Face::Back),
                         // Setting this to anything other than Fill requires Features::NON_FILL_POLYGON_MODE
                         polygon_mode: wgpu::PolygonMode::Fill,
                         // Requires Features::DEPTH_CLIP_CONTROL

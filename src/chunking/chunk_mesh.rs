@@ -25,8 +25,20 @@ fn generate_faces(x: u8, y: u8, z: u8, chunk: &Chunk, indices: &mut Vec<u32>)
 {
     if chunk.block_is_solid(x, y, z)
     {
-        // Front Face
-        if !chunk.block_is_solid(x + 1, y, z)
+        // Top Face
+        if y >= CHUNK_SIZE - 1 || !chunk.block_is_solid(x, y + 1, z)
+        {
+            indices.push(vert_index(x + 1, y + 1, z + 1));
+            indices.push(vert_index(x + 1, y + 1, z + 0));
+            indices.push(vert_index(x + 0, y + 1, z + 0));
+
+            indices.push(vert_index(x + 1, y + 1, z + 1));
+            indices.push(vert_index(x + 0, y + 1, z + 0));
+            indices.push(vert_index(x + 0, y + 1, z + 1));
+        }
+
+        // Bottom Face
+        if y == 0 || !chunk.block_is_solid(x, y - 1, z)
         {
             indices.push(vert_index(x + 0, y + 0, z + 0));
             indices.push(vert_index(x + 1, y + 0, z + 0));
@@ -37,16 +49,52 @@ fn generate_faces(x: u8, y: u8, z: u8, chunk: &Chunk, indices: &mut Vec<u32>)
             indices.push(vert_index(x + 0, y + 0, z + 1));
         }
 
+        // Front Face
+        if x >= CHUNK_SIZE - 1 || !chunk.block_is_solid(x + 1, y, z)
+        {
+            indices.push(vert_index(x + 1, y + 1, z + 1));
+            indices.push(vert_index(x + 1, y + 0, z + 1));
+            indices.push(vert_index(x + 1, y + 0, z + 0));
+
+            indices.push(vert_index(x + 1, y + 1, z + 1));
+            indices.push(vert_index(x + 1, y + 0, z + 0));
+            indices.push(vert_index(x + 1, y + 1, z + 0));
+        }
+
         // Back Face
         if x == 0 || !chunk.block_is_solid(x - 1, y, z)
         {
-            indices.push(vert_index(x + 1, y + 1, z + 1));
-            indices.push(vert_index(x + 1, y + 1, z + 0));
+            indices.push(vert_index(x + 0, y + 1, z + 1));
+            indices.push(vert_index(x + 0, y + 0, z + 0));
+            indices.push(vert_index(x + 0, y + 0, z + 1));
+
+            indices.push(vert_index(x + 0, y + 1, z + 1));
             indices.push(vert_index(x + 0, y + 1, z + 0));
+            indices.push(vert_index(x + 0, y + 0, z + 0));
+        }
+
+        // Left Face
+        if z >= CHUNK_SIZE - 1 || !chunk.block_is_solid(x, y, z + 1)
+        {
+            indices.push(vert_index(x + 1, y + 1, z + 1));
+            indices.push(vert_index(x + 0, y + 1, z + 1));
+            indices.push(vert_index(x + 0, y + 0, z + 1));
 
             indices.push(vert_index(x + 1, y + 1, z + 1));
+            indices.push(vert_index(x + 0, y + 0, z + 1));
+            indices.push(vert_index(x + 1, y + 0, z + 1));
+        }
+
+        // Right Face
+        if z == 0 || !chunk.block_is_solid(x, y, z - 1)
+        {
+            indices.push(vert_index(x + 1, y + 1, z + 0));
+            indices.push(vert_index(x + 0, y + 0, z + 0));
             indices.push(vert_index(x + 0, y + 1, z + 0));
-            indices.push(vert_index(x + 0, y + 1, z + 1));
+
+            indices.push(vert_index(x + 1, y + 1, z + 0));
+            indices.push(vert_index(x + 1, y + 0, z + 0));
+            indices.push(vert_index(x + 0, y + 0, z + 0));
         }
     }
 }
