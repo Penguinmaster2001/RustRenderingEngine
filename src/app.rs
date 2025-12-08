@@ -1,8 +1,9 @@
 use std::sync::Arc;
-
 use winit::{
     application::ApplicationHandler,
     event::{
+        DeviceEvent,
+        DeviceId,
         KeyEvent,
         WindowEvent,
     },
@@ -18,6 +19,7 @@ use crate::state::State;
 pub struct App
 {
     state: Option<State>,
+    last_time: std::time::Instant,
 }
 
 
@@ -26,7 +28,10 @@ impl App
 {
     pub fn new() -> Self
     {
-        Self { state: None }
+        Self {
+            state: None,
+            last_time: instant::Instant::now(),
+        }
     }
 }
 
@@ -54,6 +59,37 @@ impl ApplicationHandler<State> for App
 
 
 
+    fn device_event(
+        &mut self,
+        _event_loop: &ActiveEventLoop,
+        _device_id: DeviceId,
+        event: DeviceEvent,
+    )
+    {
+        let state = if let Some(state) = &mut self.state
+        {
+            state
+        }
+        else
+        {
+            return;
+        };
+        match event
+        {
+            DeviceEvent::MouseMotion { delta: (dx, dy) } =>
+            {
+                if state.mouse_pressed
+                {
+                    state.camera_controller.handle_mouse(dx, dy);
+                }
+            }
+            _ =>
+            {}
+        }
+    }
+
+
+
     fn window_event(
         &mut self,
         event_loop: &ActiveEventLoop,
@@ -73,7 +109,9 @@ impl ApplicationHandler<State> for App
             WindowEvent::Resized(size) => state.resize(size.width, size.height),
             WindowEvent::RedrawRequested =>
             {
-                state.update();
+                let dt = self.last_time.elapsed();
+                self.last_time = instant::Instant::now();
+                state.update(dt);
                 match state.render()
                 {
                     Ok(_) => (),
@@ -90,6 +128,17 @@ impl ApplicationHandler<State> for App
                         log::error!("Unable to render {}", e);
                     }
                 }
+            }
+
+            WindowEvent::MouseInput {
+                state: btn_state,
+                button,
+                ..
+            } => state.handle_mouse_button(button, btn_state.is_pressed()),
+
+            WindowEvent::MouseWheel { delta, .. } =>
+            {
+                state.handle_mouse_scroll(&delta);
             }
 
             WindowEvent::KeyboardInput {

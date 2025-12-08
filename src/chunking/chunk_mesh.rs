@@ -26,13 +26,28 @@ fn generate_faces(x: u8, y: u8, z: u8, chunk: &Chunk, indices: &mut Vec<u32>)
     if chunk.block_is_solid(x, y, z)
     {
         // Front Face
-        indices.push(vert_index(x + 0, y + 0, z + 0));
-        indices.push(vert_index(x + 1, y + 0, z + 0));
-        indices.push(vert_index(x + 1, y + 0, z + 1));
+        if !chunk.block_is_solid(x + 1, y, z)
+        {
+            indices.push(vert_index(x + 0, y + 0, z + 0));
+            indices.push(vert_index(x + 1, y + 0, z + 0));
+            indices.push(vert_index(x + 1, y + 0, z + 1));
 
-        indices.push(vert_index(x + 0, y + 0, z + 0));
-        indices.push(vert_index(x + 1, y + 0, z + 1));
-        indices.push(vert_index(x + 0, y + 0, z + 1));
+            indices.push(vert_index(x + 0, y + 0, z + 0));
+            indices.push(vert_index(x + 1, y + 0, z + 1));
+            indices.push(vert_index(x + 0, y + 0, z + 1));
+        }
+
+        // Back Face
+        if x == 0 || !chunk.block_is_solid(x - 1, y, z)
+        {
+            indices.push(vert_index(x + 1, y + 1, z + 1));
+            indices.push(vert_index(x + 1, y + 1, z + 0));
+            indices.push(vert_index(x + 0, y + 1, z + 0));
+
+            indices.push(vert_index(x + 1, y + 1, z + 1));
+            indices.push(vert_index(x + 0, y + 1, z + 0));
+            indices.push(vert_index(x + 0, y + 1, z + 1));
+        }
     }
 }
 

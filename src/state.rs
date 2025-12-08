@@ -24,6 +24,10 @@ use std::sync::Arc;
 use wgpu::util::DeviceExt;
 use winit::{
     dpi::PhysicalPosition,
+    event::{
+        MouseButton,
+        MouseScrollDelta,
+    },
     event_loop::ActiveEventLoop,
     keyboard::KeyCode,
     window::Window,
@@ -41,13 +45,15 @@ pub struct State
     diffuse_bind_group: wgpu::BindGroup,
     depth_texture: Texture,
     camera: camera::Camera,
-    camera_controller: camera::CameraController,
+    projection: camera::Projection,
+    pub camera_controller: camera::CameraController,
     camera_uniform: camera::CameraUniform,
     camera_buffer: wgpu::Buffer,
     camera_bind_group: wgpu::BindGroup,
     chunks: ChunkContainer,
     chunk_renderer: ChunkRenderer,
     pub mouse_pos: PhysicalPosition<f64>,
+    pub mouse_pressed: bool,
 }
 
 
@@ -118,24 +124,18 @@ impl State
                 source: wgpu::ShaderSource::Wgsl(include_str!("shader.wgsl").into()),
             });
 
-        let camera = camera::Camera {
-            // position the camera 1 unit up and 2 units back
-            // +z is out of the screen
-            eye: (0.0, 1.0, 2.0).into(),
-            // have it look at the origin
-            target: (0.0, 0.0, 0.0).into(),
-            // which way is "up"
-            up: cgmath::Vector3::unit_y(),
-            aspect: renderer.config.width as f32 / renderer.config.height as f32,
-            fovy: 45.0,
-            znear: 0.1,
-            zfar: 100.0,
-        };
-
-        let camera_controller = camera::CameraController::new(0.2);
+        let camera = camera::Camera::new((0.0, 5.0, 10.0), cgmath::Deg(-90.0), cgmath::Deg(-20.0));
+        let projection = camera::Projection::new(
+            renderer.config.width,
+            renderer.config.height,
+            cgmath::Deg(90.0),
+            0.01,
+            1000.0,
+        );
+        let camera_controller = camera::CameraController::new(10.0, 1.0);
 
         let mut camera_uniform = camera::CameraUniform::new();
-        camera_uniform.update_view_proj(&camera);
+        camera_uniform.update_view_proj(&camera, &projection);
 
         let camera_buffer = renderer
             .device
@@ -151,7 +151,7 @@ impl State
                 .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
                     entries: &[wgpu::BindGroupLayoutEntry {
                         binding: 0,
-                        visibility: wgpu::ShaderStages::VERTEX,
+                        visibility: wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT,
                         ty: wgpu::BindingType::Buffer {
                             ty: wgpu::BufferBindingType::Uniform,
                             has_dynamic_offset: false,
@@ -219,7 +219,7 @@ impl State
                         topology: wgpu::PrimitiveTopology::TriangleList, // 1.
                         strip_index_format: None,
                         front_face: wgpu::FrontFace::Ccw, // 2.
-                        cull_mode: None,                  // Some(wgpu::Face::Back),
+                        cull_mode: None,                  //Some(wgpu::Face::Back),
                         // Setting this to anything other than Fill requires Features::NON_FILL_POLYGON_MODE
                         polygon_mode: wgpu::PolygonMode::Fill,
                         // Requires Features::DEPTH_CLIP_CONTROL
@@ -278,11 +278,13 @@ impl State
             diffuse_bind_group,
             depth_texture,
             camera,
+            projection,
             camera_controller,
             camera_uniform,
             camera_buffer,
             camera_bind_group,
             mouse_pos: PhysicalPosition { x: 0.0, y: 0.0 },
+            mouse_pressed: false,
         })
     }
 
@@ -291,6 +293,7 @@ impl State
     pub fn resize(&mut self, width: u32, height: u32)
     {
         self.renderer.resize(width, height);
+        self.projection.resize(width, height);
 
         if width > 0 && height > 0
         {
@@ -393,10 +396,30 @@ impl State
 
 
 
-    pub fn update(&mut self)
+    pub fn handle_mouse_button(&mut self, button: MouseButton, pressed: bool)
     {
-        self.camera_controller.update_camera(&mut self.camera);
-        self.camera_uniform.update_view_proj(&self.camera);
+        match button
+        {
+            MouseButton::Left => self.mouse_pressed = pressed,
+            _ =>
+            {}
+        }
+    }
+
+
+
+    pub fn handle_mouse_scroll(&mut self, delta: &MouseScrollDelta)
+    {
+        self.camera_controller.handle_scroll(delta);
+    }
+
+
+
+    pub fn update(&mut self, dt: instant::Duration)
+    {
+        self.camera_controller.update_camera(&mut self.camera, dt);
+        self.camera_uniform
+            .update_view_proj(&self.camera, &self.projection);
         self.renderer.queue.write_buffer(
             &self.camera_buffer,
             0,
