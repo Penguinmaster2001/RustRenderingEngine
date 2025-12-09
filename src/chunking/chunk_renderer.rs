@@ -10,7 +10,7 @@ use std::collections::HashMap;
 
 pub struct ChunkRenderer
 {
-    chunk_meshes: HashMap<Vector3<u32>, ChunkMesh>,
+    chunk_meshes: HashMap<Vector3<i64>, ChunkMesh>,
 }
 
 
@@ -47,7 +47,7 @@ where
 {
     fn draw_chunks(&mut self, chunk_renderer: &ChunkRenderer)
     {
-        for (_, chunk_mesh) in &chunk_renderer.chunk_meshes
+        for chunk_mesh in chunk_renderer.chunk_meshes.values()
         {
             self.set_vertex_buffer(0, chunk_mesh.vertex_buffer.slice(..));
             self.set_index_buffer(chunk_mesh.index_buffer.slice(..), wgpu::IndexFormat::Uint32);

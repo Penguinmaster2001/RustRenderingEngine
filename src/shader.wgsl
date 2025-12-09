@@ -34,44 +34,46 @@ fn vs_main(
 
 
 // Fragment shader
-
 @group(0) @binding(0)
 var t_diffuse: texture_2d<f32>;
 @group(0) @binding(1)
 var s_diffuse: sampler;
 
 @fragment
-fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
+fn fs_main(in: VertexOutput) -> @location(0) vec4<f32>
+{
     let dpdx = dpdx(in.world_position);
     let dpdy = dpdy(in.world_position);
     let normal = normalize(cross(dpdx, dpdy));
     
-    let lightPos = 20.0 * vec3(0.5, 1.0, 0.3);
+    // return vec4(normal, 1.0);
+    
+    let lightPos = 20.0 * vec3(0.5, 1.5, 0.3);
     var lightDir = lightPos - in.world_position;
     let distance = dot(lightDir, lightDir);
     lightDir = normalize(lightDir);
   
     let lambertian = max(dot(lightDir, normal), 0.0);
-    var specular = 0.0;
+    // var specular = 0.0;
   
-    if (lambertian > 0.0)
-    {
-      let viewDir = normalize(-in.world_position);
+    // if (lambertian > 0.0)
+    // {
+    //   let viewDir = normalize(-in.world_position);
   
-      let halfDir = normalize(lightDir + viewDir);
-      let specAngle = max(dot(halfDir, normal), 0.0);
-      let shininess = 1.0;
-      specular = pow(specAngle, shininess);
-    }
+    //   let halfDir = normalize(lightDir + viewDir);
+    //   let specAngle = max(dot(halfDir, normal), 0.0);
+    //   let shininess = 1.0;
+    //   specular = pow(specAngle, shininess);
+    // }
     
     let ambientColor = 0.01 * vec4(1.0, 1.0, 1.0, 1.0);
     let diffuseColor = textureSample(t_diffuse, s_diffuse, in.tex_coords);
     let lightColor = vec4(1.0);
-    let lightPower = 10.0;
-    let specColor = vec4(1.0);
-    let colorLinear = ambientColor +
-                       diffuseColor * lambertian * lightColor * lightPower / distance +
-                       specColor * specular * lightColor * lightPower / distance;
+    let lightPower = 100.0;
+    // let specColor = vec4(1.0);
+    let colorLinear = ambientColor
+                       + diffuseColor * lambertian * lightColor * lightPower / distance;
+                       // + specColor * specular * lightColor * lightPower / distance;
                        
     let screenGamma = 1.5;
     

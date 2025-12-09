@@ -1,5 +1,6 @@
 use crate::chunking::{
     blocks::{
+        BLOCK_SIZE,
         Block,
         BlockType,
     },
@@ -10,13 +11,16 @@ use std::collections::HashMap;
 
 
 
-pub const CHUNK_SIZE: u8 = 8;
-pub const CHUNK_BLOCK_COUNT: u32 = CHUNK_SIZE as u32 * CHUNK_SIZE as u32 * CHUNK_SIZE as u32;
+pub const CHUNK_BLOCK_SIZE: u8 = 32;
+pub const CHUNK_WORLD_SIZE: f32 = CHUNK_BLOCK_SIZE as f32 * BLOCK_SIZE;
+pub const CHUNK_BLOCK_COUNT: u32 =
+    CHUNK_BLOCK_SIZE as u32 * CHUNK_BLOCK_SIZE as u32 * CHUNK_BLOCK_SIZE as u32;
 
 
 
 pub struct Chunk
 {
+    pub world_offset: Vector3<i64>,
     blocks: [Block; CHUNK_BLOCK_COUNT as usize],
 }
 
@@ -24,16 +28,19 @@ pub struct Chunk
 
 impl Chunk
 {
-    pub fn new() -> Self
+    pub fn from_offset(x: i64, y: i64, z: i64) -> Self
     {
         let height_map = HeightMap::new();
         let blocks = [Block::new(BlockType::Empty); CHUNK_BLOCK_COUNT as usize];
 
-        let mut chunk = Self { blocks };
+        let mut chunk = Self {
+            world_offset: (x, y, z).into(),
+            blocks,
+        };
 
-        for x in 0..CHUNK_SIZE
+        for x in 0..CHUNK_BLOCK_SIZE
         {
-            for z in 0..CHUNK_SIZE
+            for z in 0..CHUNK_BLOCK_SIZE
             {
                 let height = height_map.height(x, z);
                 for y in 0..(height as u8)
@@ -54,7 +61,7 @@ impl Chunk
     pub fn block_at(&self, x: u8, y: u8, z: u8) -> Option<&Block>
     {
         self.blocks.get(
-            ((((x as usize) * CHUNK_SIZE as usize) + y as usize) * CHUNK_SIZE as usize)
+            ((((x as usize) * CHUNK_BLOCK_SIZE as usize) + y as usize) * CHUNK_BLOCK_SIZE as usize)
                 + z as usize,
         )
     }
@@ -64,7 +71,7 @@ impl Chunk
     pub fn block_at_mut(&mut self, x: u8, y: u8, z: u8) -> Option<&mut Block>
     {
         self.blocks.get_mut(
-            ((((x as usize) * CHUNK_SIZE as usize) + y as usize) * CHUNK_SIZE as usize)
+            ((((x as usize) * CHUNK_BLOCK_SIZE as usize) + y as usize) * CHUNK_BLOCK_SIZE as usize)
                 + z as usize,
         )
     }
@@ -85,7 +92,7 @@ impl Chunk
 
 pub struct ChunkContainer
 {
-    pub chunks: HashMap<Vector3<u32>, Chunk>,
+    pub chunks: HashMap<Vector3<i64>, Chunk>,
 }
 
 
@@ -94,9 +101,16 @@ impl ChunkContainer
 {
     pub fn new() -> Self
     {
-        let chunk = Chunk::new();
-        let mut chunks = HashMap::new();
-        chunks.insert((0, 0, 0).into(), chunk);
-        Self { chunks }
+        Self {
+            chunks: HashMap::new(),
+        }
+    }
+
+
+
+    pub fn add_at(&mut self, x: i64, y: i64, z: i64)
+    {
+        let chunk = Chunk::from_offset(x, y, z);
+        self.chunks.insert((x, y, z).into(), chunk);
     }
 }

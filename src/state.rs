@@ -267,7 +267,10 @@ impl State
             });
         let num_indices = INDICES.len() as u32;
 
-        let chunks = ChunkContainer::new();
+        let mut chunks = ChunkContainer::new();
+        chunks.add_at(0, 0, 0);
+        chunks.add_at(1, 0, 0);
+        chunks.add_at(1, 0, 1);
 
         let chunk_renderer = ChunkRenderer::from_chunk_container(&chunks, &renderer);
 

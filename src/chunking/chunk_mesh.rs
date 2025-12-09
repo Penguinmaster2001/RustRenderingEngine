@@ -2,7 +2,8 @@ use crate::{
     chunking::{
         blocks::BLOCK_SIZE,
         chunk::{
-            CHUNK_SIZE,
+            CHUNK_BLOCK_SIZE,
+            CHUNK_WORLD_SIZE,
             Chunk,
         },
     },
@@ -16,7 +17,8 @@ use wgpu::util::DeviceExt;
 
 fn vert_index(x: u8, y: u8, z: u8) -> u32
 {
-    ((((x as u32) * (CHUNK_SIZE + 1) as u32) + y as u32) * (CHUNK_SIZE + 1) as u32) + z as u32
+    ((((x as u32) * (CHUNK_BLOCK_SIZE + 1) as u32) + y as u32) * (CHUNK_BLOCK_SIZE + 1) as u32)
+        + z as u32
 }
 
 
@@ -26,7 +28,7 @@ fn generate_faces(x: u8, y: u8, z: u8, chunk: &Chunk, indices: &mut Vec<u32>)
     if chunk.block_is_solid(x, y, z)
     {
         // Top Face
-        if y >= CHUNK_SIZE - 1 || !chunk.block_is_solid(x, y + 1, z)
+        if y >= CHUNK_BLOCK_SIZE - 1 || !chunk.block_is_solid(x, y + 1, z)
         {
             indices.push(vert_index(x + 1, y + 1, z + 1));
             indices.push(vert_index(x + 1, y + 1, z + 0));
@@ -50,7 +52,7 @@ fn generate_faces(x: u8, y: u8, z: u8, chunk: &Chunk, indices: &mut Vec<u32>)
         }
 
         // Front Face
-        if x >= CHUNK_SIZE - 1 || !chunk.block_is_solid(x + 1, y, z)
+        if x >= CHUNK_BLOCK_SIZE - 1 || !chunk.block_is_solid(x + 1, y, z)
         {
             indices.push(vert_index(x + 1, y + 1, z + 1));
             indices.push(vert_index(x + 1, y + 0, z + 1));
@@ -74,7 +76,7 @@ fn generate_faces(x: u8, y: u8, z: u8, chunk: &Chunk, indices: &mut Vec<u32>)
         }
 
         // Left Face
-        if z >= CHUNK_SIZE - 1 || !chunk.block_is_solid(x, y, z + 1)
+        if z >= CHUNK_BLOCK_SIZE - 1 || !chunk.block_is_solid(x, y, z + 1)
         {
             indices.push(vert_index(x + 1, y + 1, z + 1));
             indices.push(vert_index(x + 0, y + 1, z + 1));
@@ -105,11 +107,11 @@ fn generate_indices(chunk: &Chunk) -> Vec<u32>
 {
     let mut indices = vec![];
 
-    for x in 0..CHUNK_SIZE
+    for x in 0..CHUNK_BLOCK_SIZE
     {
-        for y in 0..CHUNK_SIZE
+        for y in 0..CHUNK_BLOCK_SIZE
         {
-            for z in 0..CHUNK_SIZE
+            for z in 0..CHUNK_BLOCK_SIZE
             {
                 generate_faces(x, y, z, chunk, &mut indices);
             }
@@ -121,21 +123,26 @@ fn generate_indices(chunk: &Chunk) -> Vec<u32>
 
 
 
-fn generate_vertices() -> Vec<TextureVertex>
+fn generate_vertices(chunk: &Chunk) -> Vec<TextureVertex>
 {
     let mut verts = vec![];
 
-    for x in 0..(CHUNK_SIZE + 1)
+    for x in 0..(CHUNK_BLOCK_SIZE + 1)
     {
-        for y in 0..(CHUNK_SIZE + 1)
+        for y in 0..(CHUNK_BLOCK_SIZE + 1)
         {
-            for z in 0..(CHUNK_SIZE + 1)
+            for z in 0..(CHUNK_BLOCK_SIZE + 1)
             {
                 let offset = Vector3::new(
                     x as f32 * BLOCK_SIZE,
                     y as f32 * BLOCK_SIZE,
                     z as f32 * BLOCK_SIZE,
-                );
+                ) + (CHUNK_WORLD_SIZE
+                    * Vector3::new(
+                        chunk.world_offset.x as f32,
+                        chunk.world_offset.y as f32,
+                        chunk.world_offset.z as f32,
+                    ));
 
                 verts.push(TextureVertex {
                     position: [offset.x, offset.y, offset.z],
@@ -163,7 +170,7 @@ impl ChunkMesh
 {
     pub fn from_chunk(chunk: &Chunk, renderer: &Renderer) -> Self
     {
-        let vertices = generate_vertices();
+        let vertices = generate_vertices(chunk);
 
         let vertex_buffer = renderer
             .device
