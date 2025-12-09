@@ -3,7 +3,10 @@ use crate::{
     VERTICES,
     camera,
     chunking::{
-        chunk::ChunkContainer,
+        chunk::{
+            CHUNK_BLOCK_SIZE,
+            ChunkContainer,
+        },
         chunk_renderer::{
             ChunkRenderer,
             DrawChunks,
@@ -432,5 +435,32 @@ impl State
             0,
             bytemuck::cast_slice(&[self.camera_uniform]),
         );
+
+        let (c_x, c_y, c_z) = ChunkContainer::world_to_chunk(
+            self.camera.position.x,
+            self.camera.position.y,
+            self.camera.position.z,
+        );
+
+        let radius = 2;
+        for x in -radius..radius
+        {
+            for z in -radius..radius
+            {
+                for y in -radius..radius
+                {
+                    if self.chunks.add_at(x + c_x, y + c_y, z + c_z)
+                    {
+                        self.chunk_renderer.add_chunk(
+                            self.chunks
+                                .chunks
+                                .get(&(x + c_x, y + c_y, z + c_z).into())
+                                .unwrap(),
+                            &self.renderer,
+                        );
+                    }
+                }
+            }
+        }
     }
 }

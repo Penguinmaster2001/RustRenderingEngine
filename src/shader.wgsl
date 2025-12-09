@@ -48,7 +48,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32>
     
     // return vec4(normal, 1.0);
     
-    let lightPos = 20.0 * vec3(-0.5, 1.5, 0.3);
+    let lightPos = camera.view_pos.xyz + (5.0 * vec3(-0.5, 1.5, 0.3));
     var lightDir = lightPos - in.world_position;
     let distance = dot(lightDir, lightDir);
     lightDir = normalize(lightDir);
@@ -66,7 +66,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32>
     //   specular = pow(specAngle, shininess);
     // }
     
-    let ambientColor = 0.01 * vec4(1.0, 1.0, 1.0, 1.0);
+    let ambientColor = 0.0 * vec4(1.0, 1.0, 1.0, 1.0);
     let diffuseColor = textureSample(t_diffuse, s_diffuse, in.tex_coords);
     let lightColor = vec4(1.0);
     let lightPower = 100.0;

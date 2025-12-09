@@ -1,10 +1,10 @@
-use crate::chunking::{
-    blocks::{
+use crate::{
+    chunking::blocks::{
         BLOCK_SIZE,
         Block,
         BlockType,
     },
-    generator::HeightMap,
+    world_gen::world_noise::HeightNoise,
 };
 use cgmath::Vector3;
 use std::collections::HashMap;
@@ -30,7 +30,7 @@ impl Chunk
 {
     pub fn from_offset(x: i64, y: i64, z: i64) -> Self
     {
-        let height_map = HeightMap::new();
+        let height_map = HeightNoise::new(); //HeightMap::new();
         let blocks = [Block::new(BlockType::Empty); CHUNK_BLOCK_COUNT as usize];
 
         let mut chunk = Self {
@@ -42,7 +42,25 @@ impl Chunk
         {
             for z in 0..CHUNK_BLOCK_SIZE
             {
-                let height = height_map.height(x, z);
+                let mut height = height_map.get(
+                    (x as f32 * BLOCK_SIZE) as i64
+                        + (chunk.world_offset.x as f32 * CHUNK_BLOCK_SIZE as f32 * BLOCK_SIZE)
+                            as i64,
+                    (z as f32 * BLOCK_SIZE) as i64
+                        + (chunk.world_offset.z as f32 * CHUNK_BLOCK_SIZE as f32 * BLOCK_SIZE)
+                            as i64,
+                ) - (chunk.world_offset.y * CHUNK_BLOCK_SIZE as i64);
+
+                if height < 0
+                {
+                    continue;
+                }
+
+                if height > CHUNK_BLOCK_SIZE as i64
+                {
+                    height = CHUNK_BLOCK_SIZE as i64;
+                }
+
                 for y in 0..(height as u8)
                 {
                     chunk.block_at_mut(x, y, z).and_then(|b| {
@@ -108,9 +126,39 @@ impl ChunkContainer
 
 
 
-    pub fn add_at(&mut self, x: i64, y: i64, z: i64)
+    pub fn add_at(&mut self, x: i64, y: i64, z: i64) -> bool
     {
-        let chunk = Chunk::from_offset(x, y, z);
-        self.chunks.insert((x, y, z).into(), chunk);
+        let key = (x, y, z).into();
+
+        if !self.chunks.contains_key(&key)
+        {
+            let chunk = Chunk::from_offset(x, y, z);
+            self.chunks.insert(key, chunk);
+            true
+        }
+        else
+        {
+            false
+        }
+    }
+
+
+
+    pub fn world_to_chunk(x: f32, y: f32, z: f32) -> (i64, i64, i64)
+    {
+        let x = x as i64 / (CHUNK_BLOCK_SIZE as f32 * BLOCK_SIZE) as i64;
+        let y = y as i64 / (CHUNK_BLOCK_SIZE as f32 * BLOCK_SIZE) as i64;
+        let z = z as i64 / (CHUNK_BLOCK_SIZE as f32 * BLOCK_SIZE) as i64;
+
+        (x, y, z)
+    }
+
+
+
+    pub fn chunk_at(&self, x: f32, y: f32, z: f32) -> Option<&Chunk>
+    {
+        let key = ChunkContainer::world_to_chunk(x, y, z).into();
+
+        self.chunks.get(&key)
     }
 }

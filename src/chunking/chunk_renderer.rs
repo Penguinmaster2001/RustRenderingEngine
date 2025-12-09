@@ -1,3 +1,4 @@
+use crate::chunking::chunk::Chunk;
 use crate::chunking::chunk_mesh::ChunkMesh;
 use crate::{
     chunking::chunk::ChunkContainer,
@@ -19,16 +20,24 @@ impl ChunkRenderer
 {
     pub fn from_chunk_container(chunks: &ChunkContainer, renderer: &Renderer) -> Self
     {
-        let mut chunk_meshes = HashMap::new();
+        let mut chunk_container = Self {
+            chunk_meshes: HashMap::new(),
+        };
 
-        for (position, chunk) in &chunks.chunks
+        for chunk in chunks.chunks.values()
         {
-            chunk_meshes.insert(*position, ChunkMesh::from_chunk(&chunk, &renderer));
+            chunk_container.add_chunk(chunk, renderer);
         }
 
-        Self {
-            chunk_meshes: chunk_meshes,
-        }
+        chunk_container
+    }
+
+
+
+    pub fn add_chunk(&mut self, chunk: &Chunk, renderer: &Renderer)
+    {
+        self.chunk_meshes
+            .insert(chunk.world_offset, ChunkMesh::from_chunk(&chunk, &renderer));
     }
 }
 
@@ -47,7 +56,10 @@ where
 {
     fn draw_chunks(&mut self, chunk_renderer: &ChunkRenderer)
     {
-        for chunk_mesh in chunk_renderer.chunk_meshes.values()
+        for chunk_mesh in chunk_renderer
+            .chunk_meshes
+            .values()
+            .filter(|c| c.index_count > 0)
         {
             self.set_vertex_buffer(0, chunk_mesh.vertex_buffer.slice(..));
             self.set_index_buffer(chunk_mesh.index_buffer.slice(..), wgpu::IndexFormat::Uint32);
