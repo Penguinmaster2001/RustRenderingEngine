@@ -44,11 +44,11 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32>
 {
     let dpdx = dpdx(in.world_position);
     let dpdy = dpdy(in.world_position);
-    let normal = normalize(cross(dpdx, dpdy));
+    let normal = normalize(cross(dpdy, dpdx));
     
     // return vec4(normal, 1.0);
     
-    let lightPos = 20.0 * vec3(0.5, 1.5, 0.3);
+    let lightPos = 20.0 * vec3(-0.5, 1.5, 0.3);
     var lightDir = lightPos - in.world_position;
     let distance = dot(lightDir, lightDir);
     lightDir = normalize(lightDir);
