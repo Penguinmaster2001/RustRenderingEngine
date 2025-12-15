@@ -21,6 +21,7 @@ use crate::{
         TextureVertex,
         Vertex,
     },
+    world_gen::voxel_world::VoxelWorld,
 };
 use std::sync::Arc;
 use wgpu::util::DeviceExt;
@@ -55,8 +56,7 @@ pub struct State
     camera_uniform: camera::CameraUniform,
     camera_buffer: wgpu::Buffer,
     camera_bind_group: wgpu::BindGroup,
-    chunks: ChunkContainer,
-    chunk_renderer: ChunkRenderer,
+    voxel_world: VoxelWorld,
     pub mouse_pos: PhysicalPosition<f64>,
     pub mouse_pressed: bool,
 }
@@ -270,16 +270,10 @@ impl State
             });
         let num_indices = INDICES.len() as u32;
 
-        let mut chunks = ChunkContainer::new();
-        chunks.add_at(0, 0, 0);
-        chunks.add_at(1, 0, 0);
-        chunks.add_at(1, 0, 1);
-
-        let chunk_renderer = ChunkRenderer::from_chunk_container(&chunks, &renderer);
+        let voxel_world = VoxelWorld::new(&renderer);
 
         Ok(Self {
-            chunks,
-            chunk_renderer,
+            voxel_world,
             renderer,
             render_pipeline,
             vertex_buffer,
@@ -379,7 +373,7 @@ impl State
             render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
             render_pass.draw_indexed(0..self.num_indices, 0, 0..1);
 
-            render_pass.draw_chunks(&self.chunk_renderer);
+            render_pass.draw_chunks(&self.voxel_world.chunk_renderer);
         }
 
         self.renderer
@@ -436,31 +430,7 @@ impl State
             bytemuck::cast_slice(&[self.camera_uniform]),
         );
 
-        let (c_x, c_y, c_z) = ChunkContainer::world_to_chunk(
-            self.camera.position.x,
-            self.camera.position.y,
-            self.camera.position.z,
-        );
-
-        let radius = 2;
-        for x in -radius..radius
-        {
-            for z in -radius..radius
-            {
-                for y in -radius..radius
-                {
-                    if self.chunks.add_at(x + c_x, y + c_y, z + c_z)
-                    {
-                        self.chunk_renderer.add_chunk(
-                            self.chunks
-                                .chunks
-                                .get(&(x + c_x, y + c_y, z + c_z).into())
-                                .unwrap(),
-                            &self.renderer,
-                        );
-                    }
-                }
-            }
-        }
+        self.voxel_world
+            .generate_chunks(self.camera.position, &self.renderer);
     }
 }
