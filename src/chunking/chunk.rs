@@ -155,10 +155,28 @@ impl ChunkContainer
 
 
 
-    pub fn chunk_at(&self, x: f32, y: f32, z: f32) -> Option<&Chunk>
+    pub fn get_chunk_at_world(&self, x: f32, y: f32, z: f32) -> Option<&Chunk>
     {
         let key = ChunkContainer::world_to_chunk(x, y, z).into();
 
         self.chunks.get(&key)
+    }
+
+
+
+    pub fn get_chunk(&self, x: i64, y: i64, z: i64) -> Option<&Chunk>
+    {
+        let key = (x, y, z).into();
+
+        self.chunks.get(&key)
+    }
+
+
+
+    pub fn chunk_at(self, x: i64, y: i64, z: i64) -> bool
+    {
+        let key = (x, y, z).into();
+
+        self.chunks.contains_key(&key)
     }
 }

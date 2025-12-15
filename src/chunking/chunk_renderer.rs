@@ -26,7 +26,8 @@ impl ChunkRenderer
 
         for chunk in chunks.chunks.values()
         {
-            chunk_container.add_chunk(chunk, renderer);
+            let mesh = ChunkMesh::from_chunk(chunk, renderer);
+            chunk_container.add_chunk(chunk, mesh);
         }
 
         chunk_container
@@ -34,10 +35,9 @@ impl ChunkRenderer
 
 
 
-    pub fn add_chunk(&mut self, chunk: &Chunk, renderer: &Renderer)
+    pub fn add_chunk(&mut self, chunk: &Chunk, mesh: ChunkMesh)
     {
-        self.chunk_meshes
-            .insert(chunk.world_offset, ChunkMesh::from_chunk(&chunk, &renderer));
+        self.chunk_meshes.insert(chunk.world_offset, mesh);
     }
 }
 

@@ -1,6 +1,7 @@
 use crate::{
     chunking::{
         chunk::ChunkContainer,
+        chunk_mesh::ChunkMesh,
         chunk_renderer::ChunkRenderer,
     },
     rendering::Renderer,
@@ -50,13 +51,11 @@ impl VoxelWorld
                 {
                     if self.chunks.add_at(x + c_x, y + c_y, z + c_z)
                     {
-                        self.chunk_renderer.add_chunk(
-                            self.chunks
-                                .chunks
-                                .get(&(x + c_x, y + c_y, z + c_z).into())
-                                .unwrap(),
-                            renderer,
-                        );
+                        let chunk = self.chunks.get_chunk(x + c_x, y + c_y, z + c_z).unwrap();
+
+                        let mesh = ChunkMesh::from_chunk(chunk, renderer);
+
+                        self.chunk_renderer.add_chunk(chunk, mesh);
                     }
                 }
             }

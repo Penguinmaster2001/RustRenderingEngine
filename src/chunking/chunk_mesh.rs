@@ -103,7 +103,7 @@ fn generate_faces(x: u8, y: u8, z: u8, chunk: &Chunk, indices: &mut Vec<u32>)
 
 
 
-fn generate_indices(chunk: &Chunk) -> Vec<u32>
+pub fn generate_indices(chunk: &Chunk) -> Vec<u32>
 {
     let mut indices = vec![];
 
@@ -123,7 +123,7 @@ fn generate_indices(chunk: &Chunk) -> Vec<u32>
 
 
 
-fn generate_vertices(chunk: &Chunk) -> Vec<TextureVertex>
+pub fn generate_vertices(chunk: &Chunk) -> Vec<TextureVertex>
 {
     let mut verts = vec![];
 
@@ -168,10 +168,12 @@ pub struct ChunkMesh
 
 impl ChunkMesh
 {
-    pub fn from_chunk(chunk: &Chunk, renderer: &Renderer) -> Self
+    pub fn from_verts(
+        vertices: &Vec<TextureVertex>,
+        indices: &Vec<u32>,
+        renderer: &Renderer,
+    ) -> Self
     {
-        let vertices = generate_vertices(chunk);
-
         let vertex_buffer = renderer
             .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -179,8 +181,6 @@ impl ChunkMesh
                 contents: bytemuck::cast_slice(&vertices),
                 usage: wgpu::BufferUsages::VERTEX,
             });
-
-        let indices = generate_indices(chunk);
 
         let index_buffer = renderer
             .device
@@ -195,5 +195,16 @@ impl ChunkMesh
             index_buffer,
             index_count: indices.len() as _,
         }
+    }
+
+
+
+    pub fn from_chunk(chunk: &Chunk, renderer: &Renderer) -> Self
+    {
+        let vertices = generate_vertices(chunk);
+
+        let indices = generate_indices(chunk);
+
+        ChunkMesh::from_verts(&vertices, &indices, renderer)
     }
 }
