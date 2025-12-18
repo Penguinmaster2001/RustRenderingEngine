@@ -2,16 +2,7 @@ use crate::{
     INDICES,
     VERTICES,
     camera,
-    chunking::{
-        chunk::{
-            CHUNK_BLOCK_SIZE,
-            ChunkContainer,
-        },
-        chunk_renderer::{
-            ChunkRenderer,
-            DrawChunks,
-        },
-    },
+    chunking::chunk_renderer::DrawChunks,
     rendering::Renderer,
     texture::{
         self,
@@ -135,7 +126,7 @@ impl State
         let projection = camera::Projection::new(
             renderer.config.width,
             renderer.config.height,
-            cgmath::Deg(90.0),
+            cgmath::Deg(110.0),
             0.01,
             1000.0,
         );
@@ -270,7 +261,7 @@ impl State
             });
         let num_indices = INDICES.len() as u32;
 
-        let voxel_world = VoxelWorld::new(&renderer);
+        let voxel_world = VoxelWorld::new();
 
         Ok(Self {
             voxel_world,
@@ -431,6 +422,6 @@ impl State
         );
 
         self.voxel_world
-            .generate_chunks(self.camera.position, &self.renderer);
+            .generate_chunks(&self.camera.position, &self.renderer);
     }
 }

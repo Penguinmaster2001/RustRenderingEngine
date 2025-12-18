@@ -1,36 +1,24 @@
 use crate::chunking::chunk::Chunk;
 use crate::chunking::chunk_mesh::ChunkMesh;
-use crate::{
-    chunking::chunk::ChunkContainer,
-    rendering::Renderer,
-};
-use cgmath::Vector3;
+use cgmath::Point3;
 use std::collections::HashMap;
 
 
 
 pub struct ChunkRenderer
 {
-    chunk_meshes: HashMap<Vector3<i64>, ChunkMesh>,
+    chunk_meshes: HashMap<Point3<i64>, ChunkMesh>,
 }
 
 
 
 impl ChunkRenderer
 {
-    pub fn from_chunk_container(chunks: &ChunkContainer, renderer: &Renderer) -> Self
+    pub fn new() -> Self
     {
-        let mut chunk_container = Self {
+        Self {
             chunk_meshes: HashMap::new(),
-        };
-
-        for chunk in chunks.chunks.values()
-        {
-            let mesh = ChunkMesh::from_chunk(chunk, renderer);
-            chunk_container.add_chunk(chunk, mesh);
         }
-
-        chunk_container
     }
 
 

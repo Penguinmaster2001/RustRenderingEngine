@@ -6,7 +6,10 @@ use crate::{
     },
     rendering::Renderer,
 };
-use cgmath::Point3;
+use cgmath::{
+    Point3,
+    Vector3,
+};
 
 
 
@@ -20,27 +23,19 @@ pub struct VoxelWorld
 
 impl VoxelWorld
 {
-    pub fn new(renderer: &Renderer) -> Self
+    pub fn new() -> Self
     {
-        let mut chunks = ChunkContainer::new();
-        chunks.add_at(0, 0, 0);
-        chunks.add_at(1, 0, 0);
-        chunks.add_at(1, 0, 1);
-
-        let chunk_renderer = ChunkRenderer::from_chunk_container(&chunks, &renderer);
-
         Self {
-            chunks,
-            chunk_renderer,
+            chunks: ChunkContainer::new(),
+            chunk_renderer: ChunkRenderer::new(),
         }
     }
 
 
 
-    pub fn generate_chunks(&mut self, center_pos: Point3<f32>, renderer: &Renderer)
+    pub fn generate_chunks(&mut self, center_pos: &Point3<f32>, renderer: &Renderer)
     {
-        let (c_x, c_y, c_z) =
-            ChunkContainer::world_to_chunk(center_pos.x, center_pos.y, center_pos.z);
+        let center_chunk = ChunkContainer::world_to_chunk(center_pos);
 
         let radius = 2;
         for x in -radius..radius
@@ -49,9 +44,10 @@ impl VoxelWorld
             {
                 for y in -radius..radius
                 {
-                    if self.chunks.add_at(x + c_x, y + c_y, z + c_z)
+                    let pos = center_chunk + Vector3::new(x, y, z);
+                    if self.chunks.add_at(&pos)
                     {
-                        let chunk = self.chunks.get_chunk(x + c_x, y + c_y, z + c_z).unwrap();
+                        let chunk = self.chunks.get_chunk(&pos).unwrap();
 
                         let mesh = ChunkMesh::from_chunk(chunk, renderer);
 

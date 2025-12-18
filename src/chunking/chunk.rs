@@ -6,7 +6,7 @@ use crate::{
     },
     world_gen::world_noise::HeightNoise,
 };
-use cgmath::Vector3;
+use cgmath::Point3;
 use std::collections::HashMap;
 
 
@@ -20,7 +20,7 @@ pub const CHUNK_BLOCK_COUNT: u32 =
 
 pub struct Chunk
 {
-    pub world_offset: Vector3<i64>,
+    pub world_offset: Point3<i64>,
     blocks: [Block; CHUNK_BLOCK_COUNT as usize],
 }
 
@@ -28,13 +28,13 @@ pub struct Chunk
 
 impl Chunk
 {
-    pub fn from_offset(x: i64, y: i64, z: i64) -> Self
+    pub fn from_offset(world_offset: &Point3<i64>) -> Self
     {
         let height_map = HeightNoise::new(); //HeightMap::new();
         let blocks = [Block::new(BlockType::Empty); CHUNK_BLOCK_COUNT as usize];
 
         let mut chunk = Self {
-            world_offset: (x, y, z).into(),
+            world_offset: *world_offset,
             blocks,
         };
 
@@ -110,7 +110,7 @@ impl Chunk
 
 pub struct ChunkContainer
 {
-    pub chunks: HashMap<Vector3<i64>, Chunk>,
+    pub chunks: HashMap<Point3<i64>, Chunk>,
 }
 
 
@@ -126,14 +126,12 @@ impl ChunkContainer
 
 
 
-    pub fn add_at(&mut self, x: i64, y: i64, z: i64) -> bool
+    pub fn add_at(&mut self, pos: &Point3<i64>) -> bool
     {
-        let key = (x, y, z).into();
-
-        if !self.chunks.contains_key(&key)
+        if !self.chunks.contains_key(pos)
         {
-            let chunk = Chunk::from_offset(x, y, z);
-            self.chunks.insert(key, chunk);
+            let chunk = Chunk::from_offset(pos);
+            self.chunks.insert(*pos, chunk);
             true
         }
         else
@@ -144,31 +142,27 @@ impl ChunkContainer
 
 
 
-    pub fn world_to_chunk(x: f32, y: f32, z: f32) -> (i64, i64, i64)
+    pub fn world_to_chunk(pos: &Point3<f32>) -> Point3<i64>
     {
-        let x = x as i64 / (CHUNK_BLOCK_SIZE as f32 * BLOCK_SIZE) as i64;
-        let y = y as i64 / (CHUNK_BLOCK_SIZE as f32 * BLOCK_SIZE) as i64;
-        let z = z as i64 / (CHUNK_BLOCK_SIZE as f32 * BLOCK_SIZE) as i64;
-
-        (x, y, z)
+        (pos / (CHUNK_BLOCK_SIZE as f32 * BLOCK_SIZE))
+            .cast()
+            .unwrap_or((0, 0, 0).into())
     }
 
 
 
-    pub fn get_chunk_at_world(&self, x: f32, y: f32, z: f32) -> Option<&Chunk>
+    pub fn get_chunk_at_world(&self, pos: &Point3<f32>) -> Option<&Chunk>
     {
-        let key = ChunkContainer::world_to_chunk(x, y, z).into();
+        let key = ChunkContainer::world_to_chunk(pos).into();
 
         self.chunks.get(&key)
     }
 
 
 
-    pub fn get_chunk(&self, x: i64, y: i64, z: i64) -> Option<&Chunk>
+    pub fn get_chunk(&self, pos: &Point3<i64>) -> Option<&Chunk>
     {
-        let key = (x, y, z).into();
-
-        self.chunks.get(&key)
+        self.chunks.get(pos)
     }
 
 
