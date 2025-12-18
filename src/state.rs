@@ -421,7 +421,6 @@ impl State
             bytemuck::cast_slice(&[self.camera_uniform]),
         );
 
-        self.voxel_world
-            .generate_chunks(&self.camera.position, &self.renderer);
+        self.voxel_world.update(&self.camera, &self.renderer, dt);
     }
 }

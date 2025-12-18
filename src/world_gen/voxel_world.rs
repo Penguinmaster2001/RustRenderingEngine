@@ -1,14 +1,11 @@
 use crate::{
+    camera::Camera,
     chunking::{
         chunk::ChunkContainer,
-        chunk_mesh::ChunkMesh,
         chunk_renderer::ChunkRenderer,
     },
     rendering::Renderer,
-};
-use cgmath::{
-    Point3,
-    Vector3,
+    world_gen::world_generator::WorldGenerator,
 };
 
 
@@ -17,6 +14,7 @@ pub struct VoxelWorld
 {
     chunks: ChunkContainer,
     pub chunk_renderer: ChunkRenderer,
+    generator: WorldGenerator,
 }
 
 
@@ -28,33 +26,22 @@ impl VoxelWorld
         Self {
             chunks: ChunkContainer::new(),
             chunk_renderer: ChunkRenderer::new(),
+            generator: WorldGenerator::new(2),
         }
     }
 
 
 
-    pub fn generate_chunks(&mut self, center_pos: &Point3<f32>, renderer: &Renderer)
+    pub fn update(&mut self, camera: &Camera, renderer: &Renderer, dt: instant::Duration)
     {
-        let center_chunk = ChunkContainer::world_to_chunk(center_pos);
+        let generated_chunks =
+            self.generator
+                .generate_chunks(&camera.position, renderer, &self.chunks, 4);
 
-        let radius = 2;
-        for x in -radius..radius
+        for (chunk, mesh) in generated_chunks
         {
-            for z in -radius..radius
-            {
-                for y in -radius..radius
-                {
-                    let pos = center_chunk + Vector3::new(x, y, z);
-                    if self.chunks.add_at(&pos)
-                    {
-                        let chunk = self.chunks.get_chunk(&pos).unwrap();
-
-                        let mesh = ChunkMesh::from_chunk(chunk, renderer);
-
-                        self.chunk_renderer.add_chunk(chunk, mesh);
-                    }
-                }
-            }
+            self.chunk_renderer.add_chunk(&chunk, mesh);
+            self.chunks.update_chunk(chunk);
         }
     }
 }

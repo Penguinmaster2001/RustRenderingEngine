@@ -126,6 +126,13 @@ impl ChunkContainer
 
 
 
+    pub fn update_chunk(&mut self, chunk: Chunk) -> Option<Chunk>
+    {
+        self.chunks.insert(chunk.world_offset, chunk)
+    }
+
+
+
     pub fn add_at(&mut self, pos: &Point3<i64>) -> bool
     {
         if !self.chunks.contains_key(pos)
@@ -167,10 +174,8 @@ impl ChunkContainer
 
 
 
-    pub fn chunk_at(self, x: i64, y: i64, z: i64) -> bool
+    pub fn chunk_at(&self, pos: &Point3<i64>) -> bool
     {
-        let key = (x, y, z).into();
-
-        self.chunks.contains_key(&key)
+        self.chunks.contains_key(pos)
     }
 }
