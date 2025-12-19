@@ -2,6 +2,7 @@ use crate::{
     camera::Camera,
     chunking::{
         chunk::ChunkContainer,
+        chunk_mesh::ChunkMesh,
         chunk_renderer::ChunkRenderer,
     },
     rendering::Renderer,
@@ -26,7 +27,7 @@ impl VoxelWorld
         Self {
             chunks: ChunkContainer::new(),
             chunk_renderer: ChunkRenderer::new(),
-            generator: WorldGenerator::new(2),
+            generator: WorldGenerator::new(8, 6),
         }
     }
 
@@ -34,12 +35,13 @@ impl VoxelWorld
 
     pub fn update(&mut self, camera: &Camera, renderer: &Renderer, dt: instant::Duration)
     {
-        let generated_chunks =
-            self.generator
-                .generate_chunks(&camera.position, renderer, &self.chunks, 4);
+        self.generator.generate_chunks(&camera.position, 6);
 
-        for (chunk, mesh) in generated_chunks
+        let generated_chunks = self.generator.drain_results();
+
+        for (chunk, mesh_data) in generated_chunks
         {
+            let mesh = ChunkMesh::from_data(&mesh_data, renderer);
             self.chunk_renderer.add_chunk(&chunk, mesh);
             self.chunks.update_chunk(chunk);
         }

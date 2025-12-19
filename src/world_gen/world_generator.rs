@@ -1,86 +1,155 @@
-use std::collections::VecDeque;
-
-use crate::{
-    chunking::{
-        chunk::{
-            Chunk,
-            ChunkContainer,
-        },
-        chunk_mesh::ChunkMesh,
+use crate::chunking::{
+    chunk::{
+        Chunk,
+        ChunkContainer,
     },
-    rendering::Renderer,
+    chunk_mesh::ChunkMeshData,
 };
 use cgmath::{
     Point3,
     Vector3,
 };
+use std::{
+    collections::HashSet,
+    sync::{
+        Arc,
+        mpsc,
+    },
+    thread,
+};
+
+
+
+#[derive(Clone)]
+pub struct ChunkJob
+{
+    pub pos: Point3<i64>,
+}
 
 
 
 pub struct WorldGenerator
 {
     pub load_radius: i64,
-    to_generate: VecDeque<Point3<i64>>,
+    job_tx: mpsc::Sender<ChunkJob>,
+    result_rx: mpsc::Receiver<(Chunk, ChunkMeshData)>,
+    worker_handles: Vec<thread::JoinHandle<()>>,
+    generated_chunks: HashSet<Point3<i64>>,
 }
 
 
 
 impl WorldGenerator
 {
-    pub fn new(load_radius: i64) -> Self
+    pub fn new(load_radius: i64, num_workers: usize) -> Self
     {
+        let (job_tx, job_rx) = mpsc::channel::<ChunkJob>();
+        let (result_tx, result_rx) = mpsc::channel::<(Chunk, ChunkMeshData)>();
+
+        let job_rx = Arc::new(std::sync::Mutex::new(job_rx));
+        let result_tx = Arc::new(result_tx);
+
+        let mut worker_handles = Vec::new();
+
+        for id in 0..num_workers
+        {
+            let job_rx = job_rx.clone();
+            let result_tx = result_tx.clone();
+
+            let handle = thread::spawn(move || {
+                let worker_id = id;
+                loop
+                {
+                    let job = {
+                        let rx = job_rx.lock().expect("Bad lock {worker_id}");
+                        rx.recv()
+                    };
+
+                    let job = match job
+                    {
+                        Ok(j) => j,
+                        Err(_) =>
+                        {
+                            println!("Thread exit {worker_id}");
+                            break;
+                        }
+                    };
+
+                    let chunk = Chunk::from_offset(&job.pos);
+                    let mesh_data = ChunkMeshData::from_chunk(&chunk);
+
+                    let _ = result_tx.send((chunk, mesh_data));
+                }
+            });
+
+            worker_handles.push(handle);
+        }
+
         Self {
             load_radius,
-            to_generate: VecDeque::new(),
+            job_tx,
+            result_rx,
+            worker_handles,
+            generated_chunks: HashSet::new(),
         }
     }
 
 
 
-    pub fn generate_chunks(
-        &mut self,
-        center_pos: &Point3<f32>,
-        renderer: &Renderer,
-        chunks: &ChunkContainer,
-        num: u32,
-    ) -> Vec<(Chunk, ChunkMesh)>
+    pub fn generate_chunks(&mut self, center_pos: &Point3<f32>, num: u32)
     {
+        let mut remaining = num;
         let center_chunk = ChunkContainer::world_to_chunk(center_pos);
 
-        let radius = self.load_radius;
-        for x in -radius..radius
+        'outer: for radius in 0..self.load_radius
         {
-            for z in -radius..radius
+            for x in -radius..=radius
             {
-                for y in -radius..radius
+                for z in -radius..=radius
                 {
-                    let pos = center_chunk + Vector3::new(x, y, z);
-                    if !chunks.chunk_at(&pos)
+                    if x != -radius && x != radius && z != -radius && z != radius
                     {
-                        self.to_generate.push_back(pos);
+                        continue;
+                    }
+                    for mut y in 0..=(2 * radius)
+                    {
+                        if y % 2 == 0
+                        {
+                            y /= 2;
+                        }
+                        else
+                        {
+                            y = -(y + 1) / 2;
+                        }
+
+                        let pos = center_chunk + Vector3::new(x, y, z);
+                        if self.generated_chunks.insert(pos)
+                        {
+                            let _ = self.job_tx.send(ChunkJob { pos });
+
+                            remaining -= 1;
+                            if remaining == 0
+                            {
+                                break 'outer;
+                            }
+                        }
                     }
                 }
             }
         }
+    }
 
-        let mut num = num;
 
-        let mut generated_chunks = vec![];
 
-        while let Some(pos) = self.to_generate.pop_front()
-            && num > 0
+    pub fn drain_results(&mut self) -> Vec<(Chunk, ChunkMeshData)>
+    {
+        let mut out = Vec::new();
+
+        while let Ok(result) = self.result_rx.try_recv()
         {
-            if !chunks.chunk_at(&pos)
-            {
-                num -= 1;
-
-                let chunk = Chunk::from_offset(&pos);
-                let mesh = ChunkMesh::from_chunk(&chunk, renderer);
-
-                generated_chunks.push((chunk, mesh));
-            }
+            out.push(result);
         }
 
-        generated_chunks
+        out
     }
 }

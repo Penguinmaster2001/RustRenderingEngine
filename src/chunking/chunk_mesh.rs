@@ -103,7 +103,7 @@ fn generate_faces(x: u8, y: u8, z: u8, chunk: &Chunk, indices: &mut Vec<u32>)
 
 
 
-pub fn generate_indices(chunk: &Chunk) -> Vec<u32>
+fn generate_indices(chunk: &Chunk) -> Vec<u32>
 {
     let mut indices = vec![];
 
@@ -123,7 +123,7 @@ pub fn generate_indices(chunk: &Chunk) -> Vec<u32>
 
 
 
-pub fn generate_vertices(chunk: &Chunk) -> Vec<TextureVertex>
+fn generate_vertices(chunk: &Chunk) -> Vec<TextureVertex>
 {
     let mut verts = vec![];
 
@@ -153,6 +153,27 @@ pub fn generate_vertices(chunk: &Chunk) -> Vec<TextureVertex>
     }
 
     verts
+}
+
+
+
+pub struct ChunkMeshData
+{
+    pub vertices: Vec<TextureVertex>,
+    pub indices: Vec<u32>,
+}
+
+
+
+impl ChunkMeshData
+{
+    pub fn from_chunk(chunk: &Chunk) -> Self
+    {
+        Self {
+            vertices: generate_vertices(chunk),
+            indices: generate_indices(chunk),
+        }
+    }
 }
 
 
@@ -195,6 +216,17 @@ impl ChunkMesh
             index_buffer,
             index_count: indices.len() as _,
         }
+    }
+
+
+
+    pub fn from_data(chunk_mesh_data: &ChunkMeshData, renderer: &Renderer) -> Self
+    {
+        ChunkMesh::from_verts(
+            &chunk_mesh_data.vertices,
+            &chunk_mesh_data.indices,
+            renderer,
+        )
     }
 
 
