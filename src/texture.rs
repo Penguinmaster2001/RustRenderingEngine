@@ -1,6 +1,11 @@
 use anyhow::*;
 use image::GenericImageView;
 
+use crate::{
+    chunking::blocks::BlockType,
+    vertex,
+};
+
 
 
 pub struct Texture
@@ -79,7 +84,7 @@ impl Texture
             address_mode_u: wgpu::AddressMode::ClampToEdge,
             address_mode_v: wgpu::AddressMode::ClampToEdge,
             address_mode_w: wgpu::AddressMode::ClampToEdge,
-            mag_filter: wgpu::FilterMode::Linear,
+            mag_filter: wgpu::FilterMode::Nearest,
             min_filter: wgpu::FilterMode::Nearest,
             mipmap_filter: wgpu::FilterMode::Nearest,
             ..Default::default()
@@ -139,5 +144,19 @@ impl Texture
             view,
             sampler,
         }
+    }
+
+
+
+    pub fn get_uvs(block: &BlockType, i: usize) -> [f32; 2]
+    {
+        const WIDTH: usize = 16;
+        const WIDTH_F: f32 = WIDTH as f32;
+
+        let block = *block as usize;
+        let x = block % WIDTH;
+        let y = block / WIDTH;
+
+        vertex::UVS[i].map(|uv| uv / WIDTH_F)
     }
 }

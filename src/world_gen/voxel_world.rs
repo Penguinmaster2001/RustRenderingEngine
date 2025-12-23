@@ -1,5 +1,3 @@
-use cgmath::Point3;
-
 use crate::{
     camera::Camera,
     chunking::{
@@ -38,7 +36,6 @@ impl VoxelWorld
     pub fn update(&mut self, camera: &Camera, renderer: &Renderer, dt: instant::Duration)
     {
         self.generator.generate_chunks(&camera.position, 6);
-        // self.generator.generate_chunks(&Point3::new(0.0, 0.0, 0.0), 6);
 
         let generated_chunks = self.generator.drain_results();
 

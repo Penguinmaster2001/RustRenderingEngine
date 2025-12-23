@@ -1,6 +1,4 @@
 use crate::{
-    INDICES,
-    VERTICES,
     camera,
     chunking::chunk_renderer::DrawChunks,
     rendering::Renderer,
@@ -36,9 +34,6 @@ pub struct State
 {
     pub renderer: Renderer,
     render_pipeline: wgpu::RenderPipeline,
-    vertex_buffer: wgpu::Buffer,
-    index_buffer: wgpu::Buffer,
-    num_indices: u32,
     diffuse_bind_group: wgpu::BindGroup,
     depth_texture: Texture,
     camera: camera::Camera,
@@ -62,12 +57,12 @@ impl State
 
         window.set_cursor_grab(CursorGrabMode::Locked)?;
 
-        let diffuse_bytes = include_bytes!("schmob.jpeg");
+        let diffuse_bytes = include_bytes!("../res/textures/8pxBlocks.png");
         let diffuse_texture = texture::Texture::from_bytes(
             &renderer.device,
             &renderer.queue,
             diffuse_bytes,
-            "schmob.jpeg",
+            "block_atlas",
         )
         .unwrap();
 
@@ -130,7 +125,7 @@ impl State
             0.01,
             1000.0,
         );
-        let camera_controller = camera::CameraController::new(25.0, 2.0);
+        let camera_controller = camera::CameraController::new(25.0, 1.8);
 
         let mut camera_uniform = camera::CameraUniform::new();
         camera_uniform.update_view_proj(&camera, &projection);
@@ -244,32 +239,12 @@ impl State
                     cache: None,     // 6.
                 });
 
-        let vertex_buffer = renderer
-            .device
-            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("Vertex Buffer"),
-                contents: bytemuck::cast_slice(VERTICES),
-                usage: wgpu::BufferUsages::VERTEX,
-            });
-
-        let index_buffer = renderer
-            .device
-            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("Index Buffer"),
-                contents: bytemuck::cast_slice(INDICES),
-                usage: wgpu::BufferUsages::INDEX,
-            });
-        let num_indices = INDICES.len() as u32;
-
         let voxel_world = VoxelWorld::new();
 
         Ok(Self {
             voxel_world,
             renderer,
             render_pipeline,
-            vertex_buffer,
-            index_buffer,
-            num_indices,
             diffuse_bind_group,
             depth_texture,
             camera,
@@ -358,11 +333,6 @@ impl State
 
             render_pass.set_bind_group(0, &self.diffuse_bind_group, &[]);
             render_pass.set_bind_group(1, &self.camera_bind_group, &[]);
-
-            render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
-
-            render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
-            render_pass.draw_indexed(0..self.num_indices, 0, 0..1);
 
             render_pass.draw_chunks(&self.voxel_world.chunk_renderer);
         }

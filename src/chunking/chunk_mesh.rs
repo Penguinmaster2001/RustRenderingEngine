@@ -331,7 +331,9 @@ impl ChunkMeshData
         for vertex in block_mesh::BLOCK_FACE_DATA[face as usize]
             .iter()
             .enumerate()
-            .map(|(i, v)| TextureVertex::from_vector((position.into() + (BLOCK_SIZE * v)), i))
+            .map(|(i, v)| {
+                TextureVertex::from_vector(position.into() + (BLOCK_SIZE * v), i, &block.block_type)
+            })
         {
             self.vertices.push(vertex);
         }

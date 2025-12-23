@@ -1,5 +1,10 @@
 use cgmath::Vector3;
 
+use crate::{
+    chunking::blocks::BlockType,
+    texture::Texture,
+};
+
 
 
 pub trait Vertex
@@ -20,7 +25,7 @@ pub struct TextureVertex
 
 
 #[rustfmt::skip]
-const UVS: [[f32; 2]; 4] = [
+pub const UVS: [[f32; 2]; 4] = [
     [1.0, 0.0],
     [0.0, 0.0],
     [0.0, 1.0],
@@ -31,11 +36,11 @@ const UVS: [[f32; 2]; 4] = [
 
 impl TextureVertex
 {
-    pub fn from_vector(v: Vector3<f32>, i: usize) -> Self
+    pub fn from_vector(v: Vector3<f32>, i: usize, block: &BlockType) -> Self
     {
         Self {
             position: [v.x, v.y, v.z],
-            tex_coords: UVS[i],
+            tex_coords: Texture::get_uvs(block, i),
         }
     }
 }
