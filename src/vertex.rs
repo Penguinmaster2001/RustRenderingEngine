@@ -1,3 +1,7 @@
+use cgmath::Vector3;
+
+
+
 pub trait Vertex
 {
     fn desc() -> wgpu::VertexBufferLayout<'static>;
@@ -11,6 +15,29 @@ pub struct TextureVertex
 {
     pub position: [f32; 3],
     pub tex_coords: [f32; 2],
+}
+
+
+
+#[rustfmt::skip]
+const UVS: [[f32; 2]; 4] = [
+    [1.0, 0.0],
+    [0.0, 0.0],
+    [0.0, 1.0],
+    [1.0, 1.0],
+];
+
+
+
+impl TextureVertex
+{
+    pub fn from_vector(v: Vector3<f32>, i: usize) -> Self
+    {
+        Self {
+            position: [v.x, v.y, v.z],
+            tex_coords: UVS[i],
+        }
+    }
 }
 
 

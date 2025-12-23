@@ -1,6 +1,11 @@
 use crate::{
     chunking::{
-        blocks::BLOCK_SIZE,
+        blocks::{
+            BLOCK_SIZE,
+            Block,
+            BlockFace,
+            block_mesh,
+        },
         chunk::{
             CHUNK_BLOCK_SIZE,
             CHUNK_WORLD_SIZE,
@@ -10,7 +15,11 @@ use crate::{
     rendering::Renderer,
     vertex::TextureVertex,
 };
-use cgmath::Vector3;
+use cgmath::{
+    EuclideanSpace,
+    Point3,
+    Vector3,
+};
 use wgpu::util::DeviceExt;
 
 
@@ -23,12 +32,25 @@ fn vert_index(x: u8, y: u8, z: u8) -> u32
 
 
 
+fn create_vert_at(x: u8, y: u8, z: u8, chunk: &Chunk) -> TextureVertex
+{
+    let offset: Vector3<f32> = (BLOCK_SIZE * Vector3::new(x as f32, y as f32, z as f32))
+        + (CHUNK_WORLD_SIZE * chunk.world_offset.to_vec().cast().unwrap());
+
+    TextureVertex {
+        position: [offset.x, offset.y, offset.z],
+        tex_coords: [0.0, 0.0],
+    }
+}
+
+
+
 fn generate_faces(x: u8, y: u8, z: u8, chunk: &Chunk, indices: &mut Vec<u32>)
 {
-    if chunk.block_is_solid(x, y, z)
+    if chunk.block_is_solid((x, y, z))
     {
         // Top Face
-        if y >= CHUNK_BLOCK_SIZE - 1 || !chunk.block_is_solid(x, y + 1, z)
+        if y >= CHUNK_BLOCK_SIZE - 1 || !chunk.block_is_solid((x, y + 1, z))
         {
             indices.push(vert_index(x + 1, y + 1, z + 1));
             indices.push(vert_index(x + 1, y + 1, z + 0));
@@ -40,7 +62,7 @@ fn generate_faces(x: u8, y: u8, z: u8, chunk: &Chunk, indices: &mut Vec<u32>)
         }
 
         // Bottom Face
-        if y == 0 || !chunk.block_is_solid(x, y - 1, z)
+        if y == 0 || !chunk.block_is_solid((x, y - 1, z))
         {
             indices.push(vert_index(x + 0, y + 0, z + 0));
             indices.push(vert_index(x + 1, y + 0, z + 0));
@@ -52,7 +74,7 @@ fn generate_faces(x: u8, y: u8, z: u8, chunk: &Chunk, indices: &mut Vec<u32>)
         }
 
         // Front Face
-        if x >= CHUNK_BLOCK_SIZE - 1 || !chunk.block_is_solid(x + 1, y, z)
+        if x >= CHUNK_BLOCK_SIZE - 1 || !chunk.block_is_solid((x + 1, y, z))
         {
             indices.push(vert_index(x + 1, y + 1, z + 1));
             indices.push(vert_index(x + 1, y + 0, z + 1));
@@ -64,7 +86,7 @@ fn generate_faces(x: u8, y: u8, z: u8, chunk: &Chunk, indices: &mut Vec<u32>)
         }
 
         // Back Face
-        if x == 0 || !chunk.block_is_solid(x - 1, y, z)
+        if x == 0 || !chunk.block_is_solid((x - 1, y, z))
         {
             indices.push(vert_index(x + 0, y + 1, z + 1));
             indices.push(vert_index(x + 0, y + 0, z + 0));
@@ -76,7 +98,7 @@ fn generate_faces(x: u8, y: u8, z: u8, chunk: &Chunk, indices: &mut Vec<u32>)
         }
 
         // Left Face
-        if z >= CHUNK_BLOCK_SIZE - 1 || !chunk.block_is_solid(x, y, z + 1)
+        if z >= CHUNK_BLOCK_SIZE - 1 || !chunk.block_is_solid((x, y, z + 1))
         {
             indices.push(vert_index(x + 1, y + 1, z + 1));
             indices.push(vert_index(x + 0, y + 1, z + 1));
@@ -88,7 +110,7 @@ fn generate_faces(x: u8, y: u8, z: u8, chunk: &Chunk, indices: &mut Vec<u32>)
         }
 
         // Right Face
-        if z == 0 || !chunk.block_is_solid(x, y, z - 1)
+        if z == 0 || !chunk.block_is_solid((x, y, z - 1))
         {
             indices.push(vert_index(x + 1, y + 1, z + 0));
             indices.push(vert_index(x + 0, y + 0, z + 0));
@@ -161,6 +183,7 @@ pub struct ChunkMeshData
 {
     pub vertices: Vec<TextureVertex>,
     pub indices: Vec<u32>,
+    pub vertex_count: u32,
 }
 
 
@@ -169,9 +192,165 @@ impl ChunkMeshData
 {
     pub fn from_chunk(chunk: &Chunk) -> Self
     {
-        Self {
-            vertices: generate_vertices(chunk),
-            indices: generate_indices(chunk),
+        let mut mesh_data = Self {
+            vertices: vec![],
+            indices: vec![],
+            vertex_count: 0,
+        };
+
+        for x in 0..CHUNK_BLOCK_SIZE
+        {
+            for y in 0..CHUNK_BLOCK_SIZE
+            {
+                for z in 0..CHUNK_BLOCK_SIZE
+                {
+                    mesh_data.generate_block((x, y, z).into(), chunk);
+                }
+            }
+        }
+
+        mesh_data
+    }
+
+
+
+    fn generate_block(&mut self, block_pos: Point3<u8>, chunk: &Chunk)
+    {
+        let (x, y, z) = block_pos.into();
+
+        let offset = Vector3::new(
+            x as f32 * BLOCK_SIZE,
+            y as f32 * BLOCK_SIZE,
+            z as f32 * BLOCK_SIZE,
+        ) + (CHUNK_WORLD_SIZE
+            * Vector3::new(
+                chunk.world_offset.x as f32,
+                chunk.world_offset.y as f32,
+                chunk.world_offset.z as f32,
+            ));
+
+        let mut num_faces = 0;
+
+        if let Some(block) = chunk.solid_block_at(block_pos)
+        {
+            // Generate faces on this block
+            // Right face of block to left
+            if x <= 0
+            {
+                // Check adjacent chunk
+            }
+            else if !chunk.block_is_solid((x - 1, y, z))
+            {
+                self.add_face(block, BlockFace::Back, offset);
+                num_faces += 1;
+            }
+
+            // Top face of block below
+            if y <= 0
+            {
+                // Check adjacent chunk
+            }
+            else if !chunk.block_is_solid((x, y - 1, z))
+            {
+                self.add_face(block, BlockFace::Bottom, offset);
+                num_faces += 1;
+            }
+
+            // Front face of block behind
+            if z <= 0
+            {
+                // Check adjacent chunk
+            }
+            else if !chunk.block_is_solid((x, y, z - 1))
+            {
+                self.add_face(block, BlockFace::Right, offset);
+                num_faces += 1;
+            }
+        }
+        else
+        {
+            // Generate faces on neighboring blocks
+            // Right face of block to left
+            if x <= 0 || x >= CHUNK_BLOCK_SIZE
+            {
+                // Check adjacent chunk
+            }
+            else if let Some(block) = chunk.solid_block_at((x - 1, y, z))
+            {
+                self.add_face(
+                    block,
+                    BlockFace::Front,
+                    offset - Vector3::new(BLOCK_SIZE, 0.0, 0.0),
+                );
+                num_faces += 1;
+            }
+
+            // Top face of block below
+            if y <= 0 || y >= CHUNK_BLOCK_SIZE
+            {
+                // Check adjacent chunk
+            }
+            else if let Some(block) = chunk.solid_block_at((x, y - 1, z))
+            {
+                self.add_face(
+                    block,
+                    BlockFace::Top,
+                    offset - Vector3::new(0.0, BLOCK_SIZE, 0.0),
+                );
+                num_faces += 1;
+            }
+
+            // Front face of block behind
+            if z <= 0 || z >= CHUNK_BLOCK_SIZE
+            {
+                // Check adjacent chunk
+            }
+            else if let Some(block) = chunk.solid_block_at((x, y, z - 1))
+            {
+                self.add_face(
+                    block,
+                    BlockFace::Left,
+                    offset - Vector3::new(0.0, 0.0, BLOCK_SIZE),
+                );
+                num_faces += 1;
+            }
+        }
+
+        self.add_indices(num_faces);
+    }
+
+
+
+    fn add_face<T: Into<Vector3<f32>> + Copy>(
+        &mut self,
+        block: &Block,
+        face: BlockFace,
+        position: T,
+    )
+    {
+        for vertex in block_mesh::BLOCK_FACE_DATA[face as usize]
+            .iter()
+            .enumerate()
+            .map(|(i, v)| TextureVertex::from_vector((position.into() + (BLOCK_SIZE * v)), i))
+        {
+            self.vertices.push(vertex);
+        }
+    }
+
+
+
+    fn add_indices(&mut self, num_faces: u8)
+    {
+        for _ in 0..num_faces
+        {
+            self.indices.push(0 + self.vertex_count);
+            self.indices.push(1 + self.vertex_count);
+            self.indices.push(2 + self.vertex_count);
+            self.indices.push(2 + self.vertex_count);
+            self.indices.push(3 + self.vertex_count);
+            self.indices.push(0 + self.vertex_count);
+
+            self.vertex_count += 4;
         }
     }
 }
@@ -231,12 +410,12 @@ impl ChunkMesh
 
 
 
-    pub fn from_chunk(chunk: &Chunk, renderer: &Renderer) -> Self
-    {
-        let vertices = generate_vertices(chunk);
+    // pub fn from_chunk(chunk: &Chunk, renderer: &Renderer) -> Self
+    // {
+    //     let vertices = generate_vertices(chunk);
 
-        let indices = generate_indices(chunk);
+    //     let indices = generate_indices(chunk);
 
-        ChunkMesh::from_verts(&vertices, &indices, renderer)
-    }
+    //     ChunkMesh::from_verts(&vertices, &indices, renderer)
+    // }
 }

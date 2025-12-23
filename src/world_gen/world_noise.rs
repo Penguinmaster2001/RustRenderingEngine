@@ -2,7 +2,6 @@ use noise::{
     Fbm,
     NoiseFn,
     Perlin,
-    Worley,
 };
 
 
@@ -20,12 +19,12 @@ impl HeightNoise
 {
     pub fn new() -> Self
     {
-        let noise = Perlin::new(0);
-        // let noise = Fbm::<Worley>::default();
+        // let noise = Perlin::new(0);
+        let noise = Fbm::<Perlin>::new(0);
 
         Self {
             scale: 0.01,
-            height_scale: 10.0,
+            height_scale: 20.0,
             base_noise: Box::new(noise),
         }
     }

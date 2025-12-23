@@ -76,12 +76,25 @@ impl Chunk
 
 
 
-    pub fn block_at(&self, x: u8, y: u8, z: u8) -> Option<&Block>
+    pub fn block_at<T: Into<Point3<u8>>>(&self, block: T) -> Option<&Block>
     {
+        let block = block.into();
         self.blocks.get(
-            ((((x as usize) * CHUNK_BLOCK_SIZE as usize) + y as usize) * CHUNK_BLOCK_SIZE as usize)
-                + z as usize,
+            ((((block.x as usize) * CHUNK_BLOCK_SIZE as usize) + block.y as usize)
+                * CHUNK_BLOCK_SIZE as usize)
+                + block.z as usize,
         )
+    }
+
+
+
+    pub fn solid_block_at<T: Into<Point3<u8>>>(&self, block: T) -> Option<&Block>
+    {
+        match self.block_at(block)
+        {
+            Some(b) => (b.block_type != BlockType::Empty).then_some(b),
+            None => None,
+        }
     }
 
 
@@ -96,12 +109,12 @@ impl Chunk
 
 
 
-    pub fn block_is_solid(&self, x: u8, y: u8, z: u8) -> bool
+    pub fn block_is_solid<T: Into<Point3<u8>>>(&self, block: T) -> bool
     {
-        match self.block_at(x, y, z)
+        match self.block_at(block)
         {
-            None => false,
             Some(b) => b.block_type != BlockType::Empty,
+            None => false,
         }
     }
 }
@@ -151,9 +164,16 @@ impl ChunkContainer
 
     pub fn world_to_chunk(pos: &Point3<f32>) -> Point3<i64>
     {
-        (pos / (CHUNK_BLOCK_SIZE as f32 * BLOCK_SIZE))
+        (pos / (BLOCK_SIZE * CHUNK_BLOCK_SIZE as f32))
             .cast()
-            .unwrap_or((0, 0, 0).into())
+            .unwrap()
+    }
+
+
+
+    pub fn chunk_to_world(pos: &Point3<i64>) -> Point3<f32>
+    {
+        pos.cast().unwrap() * BLOCK_SIZE * CHUNK_BLOCK_SIZE as f32
     }
 
 

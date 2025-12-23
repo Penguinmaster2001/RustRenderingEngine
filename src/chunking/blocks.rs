@@ -1,8 +1,12 @@
-pub const BLOCK_SIZE: f32 = 0.25;
+pub mod block_mesh;
 
 
 
-pub enum BlockFaces
+pub const BLOCK_SIZE: f32 = 1.0;
+
+
+
+pub enum BlockFace
 {
     Front,
     Back,
