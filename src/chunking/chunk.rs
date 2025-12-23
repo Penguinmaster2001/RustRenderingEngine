@@ -64,7 +64,14 @@ impl Chunk
                 for y in 0..(height as u8)
                 {
                     chunk.block_at_mut(x, y, z).and_then(|b| {
-                        b.block_type = BlockType::Full;
+                        b.block_type = if 0 == y % 2
+                        {
+                            BlockType::Grass
+                        }
+                        else
+                        {
+                            BlockType::Stone
+                        };
                         Some(b)
                     });
                 }

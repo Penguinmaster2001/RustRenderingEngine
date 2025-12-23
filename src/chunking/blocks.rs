@@ -22,7 +22,8 @@ pub enum BlockFace
 pub enum BlockType
 {
     Empty,
-    Full,
+    Grass,
+    Stone,
 }
 
 

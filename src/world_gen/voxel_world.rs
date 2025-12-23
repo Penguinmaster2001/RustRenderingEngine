@@ -27,7 +27,7 @@ impl VoxelWorld
         Self {
             chunks: ChunkContainer::new(),
             chunk_renderer: ChunkRenderer::new(),
-            generator: WorldGenerator::new(8, 6),
+            generator: WorldGenerator::new(20, 6),
         }
     }
 

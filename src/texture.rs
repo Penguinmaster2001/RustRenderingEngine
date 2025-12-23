@@ -1,10 +1,9 @@
-use anyhow::*;
-use image::GenericImageView;
-
 use crate::{
     chunking::blocks::BlockType,
     vertex,
 };
+use anyhow::*;
+use image::GenericImageView;
 
 
 
@@ -154,9 +153,11 @@ impl Texture
         const WIDTH_F: f32 = WIDTH as f32;
 
         let block = *block as usize;
-        let x = block % WIDTH;
-        let y = block / WIDTH;
+        let x = (block % WIDTH) as f32;
+        let y = (block / WIDTH) as f32;
 
-        vertex::UVS[i].map(|uv| uv / WIDTH_F)
+        let [x_offset, y_offset] = vertex::UVS[i];
+
+        [x + x_offset, y + y_offset].map(|uv| uv / WIDTH_F)
     }
 }
