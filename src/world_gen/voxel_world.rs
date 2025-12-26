@@ -1,10 +1,10 @@
 use crate::{
-    camera::Camera,
     chunking::{
         chunk::ChunkContainer,
         chunk_mesh::ChunkMesh,
         chunk_renderer::ChunkRenderer,
     },
+    player::Player,
     rendering::Renderer,
     world_gen::world_generator::WorldGenerator,
 };
@@ -33,9 +33,9 @@ impl VoxelWorld
 
 
 
-    pub fn update(&mut self, camera: &Camera, renderer: &Renderer, dt: instant::Duration)
+    pub fn update(&mut self, player: &Player, renderer: &Renderer, dt: instant::Duration)
     {
-        self.generator.generate_chunks(&camera.position, 6);
+        self.generator.generate_chunks(&player.position, 6);
 
         let generated_chunks = self.generator.drain_results();
 

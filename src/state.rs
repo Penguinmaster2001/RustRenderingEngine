@@ -1,7 +1,10 @@
 use crate::{
-    camera,
     chunking::chunk_renderer::DrawChunks,
-    rendering::Renderer,
+    player::Player,
+    rendering::{
+        Renderer,
+        camera,
+    },
     texture::{
         self,
         Texture,
@@ -38,9 +41,10 @@ pub struct State
     render_pipeline: wgpu::RenderPipeline,
     diffuse_bind_group: wgpu::BindGroup,
     depth_texture: Texture,
-    camera: camera::Camera,
+    // camera: camera::Camera,
     projection: camera::Projection,
-    pub camera_controller: camera::CameraController,
+    // pub camera_controller: camera::CameraController,
+    pub player: Player,
     camera_uniform: camera::CameraUniform,
     camera_buffer: wgpu::Buffer,
     camera_bind_group: wgpu::BindGroup,
@@ -64,7 +68,6 @@ impl State
 
         let shader = State::create_shader(&renderer);
 
-        let camera = camera::Camera::new((0.0, 5.0, 10.0), cgmath::Deg(-90.0), cgmath::Deg(-20.0));
         let projection = camera::Projection::new(
             renderer.config.width,
             renderer.config.height,
@@ -72,10 +75,10 @@ impl State
             0.01,
             1000.0,
         );
-        let camera_controller = camera::CameraController::new(25.0, 1.8);
+        let player = Player::new((0.0, 0.0, 0.0));
 
         let mut camera_uniform = camera::CameraUniform::new();
-        camera_uniform.update_view_proj(&camera, &projection);
+        camera_uniform.update_view_proj(&player.camera, &projection);
 
         let camera_buffer = renderer
             .device
@@ -194,9 +197,8 @@ impl State
             render_pipeline,
             diffuse_bind_group,
             depth_texture,
-            camera,
             projection,
-            camera_controller,
+            player,
             camera_uniform,
             camera_buffer,
             camera_bind_group,
@@ -371,15 +373,15 @@ impl State
 
 
 
-    pub fn handle_key(&mut self, event_loop: &ActiveEventLoop, code: KeyCode, is_pressed: bool)
+    pub fn handle_key(&mut self, event_loop: &ActiveEventLoop, key: KeyCode, is_pressed: bool)
     {
-        if (code, is_pressed) == (KeyCode::Escape, true)
+        if (key, is_pressed) == (KeyCode::Escape, true)
         {
             event_loop.exit();
         }
         else
         {
-            self.camera_controller.handle_key(code, is_pressed);
+            self.player.handle_key(key, is_pressed);
         }
     }
 
@@ -399,22 +401,22 @@ impl State
 
     pub fn handle_mouse_scroll(&mut self, delta: &MouseScrollDelta)
     {
-        self.camera_controller.handle_scroll(delta);
+        self.player.handle_mouse_scroll(delta);
     }
 
 
 
     pub fn update(&mut self, dt: instant::Duration)
     {
-        self.camera_controller.update_camera(&mut self.camera, dt);
+        self.player.update(dt);
         self.camera_uniform
-            .update_view_proj(&self.camera, &self.projection);
+            .update_view_proj(&self.player.camera, &self.projection);
         self.renderer.queue.write_buffer(
             &self.camera_buffer,
             0,
             bytemuck::cast_slice(&[self.camera_uniform]),
         );
 
-        self.voxel_world.update(&self.camera, &self.renderer, dt);
+        self.voxel_world.update(&self.player, &self.renderer, dt);
     }
 }

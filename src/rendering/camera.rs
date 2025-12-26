@@ -25,7 +25,7 @@ const SAFE_FRAC_PI_2: f32 = FRAC_PI_2 - 0.0001;
 #[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct CameraUniform
 {
-    view_proj: [[f32; 4]; 4],
+    view_projection: [[f32; 4]; 4],
     view_position: [f32; 4],
 }
 
@@ -37,7 +37,7 @@ impl CameraUniform
     {
         Self {
             view_position: [0.0; 4],
-            view_proj: cgmath::Matrix4::identity().into(),
+            view_projection: cgmath::Matrix4::identity().into(),
         }
     }
 
@@ -46,7 +46,7 @@ impl CameraUniform
     pub fn update_view_proj(&mut self, camera: &Camera, projection: &Projection)
     {
         self.view_position = camera.position.to_homogeneous().into();
-        self.view_proj = (projection.calc_matrix() * camera.calc_matrix()).into()
+        self.view_projection = (projection.calc_matrix() * camera.calc_matrix()).into()
     }
 }
 
@@ -97,9 +97,9 @@ impl Camera
 pub struct Projection
 {
     aspect: f32,
-    fovy: Rad<f32>,
-    znear: f32,
-    zfar: f32,
+    fov_y: Rad<f32>,
+    z_near: f32,
+    z_far: f32,
 }
 
 
@@ -110,9 +110,9 @@ impl Projection
     {
         Self {
             aspect: width as f32 / height as f32,
-            fovy: fovy.into(),
-            znear,
-            zfar,
+            fov_y: fovy.into(),
+            z_near: znear,
+            z_far: zfar,
         }
     }
 
@@ -127,7 +127,7 @@ impl Projection
 
     pub fn calc_matrix(&self) -> Matrix4<f32>
     {
-        OPENGL_TO_WGPU_MATRIX * perspective(self.fovy, self.aspect, self.znear, self.zfar)
+        OPENGL_TO_WGPU_MATRIX * perspective(self.fov_y, self.aspect, self.z_near, self.z_far)
     }
 }
 

@@ -96,7 +96,7 @@ impl ApplicationHandler<State> for App
         {
             DeviceEvent::MouseMotion { delta: (dx, dy) } =>
             {
-                state.camera_controller.handle_mouse(dx, dy);
+                state.player.camera_controller.handle_mouse(dx, dy);
             }
             _ =>
             {}

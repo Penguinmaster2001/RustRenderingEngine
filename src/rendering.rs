@@ -3,6 +3,10 @@ use winit::window::Window;
 
 
 
+pub mod camera;
+
+
+
 pub struct Renderer
 {
     pub surface: wgpu::Surface<'static>,
