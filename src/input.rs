@@ -8,6 +8,10 @@ use winit::{
 
 
 
+pub mod input_settings;
+
+
+
 pub trait InputHandler
 {
     fn handle_key(&mut self, _key: KeyCode, _pressed: bool) -> bool

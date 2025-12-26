@@ -1,4 +1,7 @@
-use crate::state::State;
+use crate::{
+    input::InputHandler,
+    state::State,
+};
 use std::{
     sync::Arc,
     time::Instant,
@@ -96,7 +99,7 @@ impl ApplicationHandler<State> for App
         {
             DeviceEvent::MouseMotion { delta: (dx, dy) } =>
             {
-                state.player.camera_controller.handle_mouse(dx, dy);
+                state.player.handle_mouse_movement(dx, dy);
             }
             _ => (),
         }
