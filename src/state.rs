@@ -13,9 +13,11 @@ use crate::{
     world_gen::voxel_world::VoxelWorld,
 };
 use std::sync::Arc;
-use wgpu::util::DeviceExt;
+use wgpu::{
+    BindGroupLayout,
+    util::DeviceExt,
+};
 use winit::{
-    dpi::PhysicalPosition,
     event::{
         MouseButton,
         MouseScrollDelta,
@@ -43,7 +45,6 @@ pub struct State
     camera_buffer: wgpu::Buffer,
     camera_bind_group: wgpu::BindGroup,
     voxel_world: VoxelWorld,
-    pub mouse_pos: PhysicalPosition<f64>,
     pub mouse_pressed: bool,
 }
 
@@ -53,69 +54,15 @@ impl State
 {
     pub async fn new(window: Arc<Window>) -> anyhow::Result<Self>
     {
-        let renderer = Renderer::new(window.clone()).await?;
+        let renderer = Renderer::new(window).await?;
+        renderer.window.set_cursor_grab(CursorGrabMode::Locked)?;
 
-        window.set_cursor_grab(CursorGrabMode::Locked)?;
+        let texture_bind_group_layout = State::create_texture_bind_group_layout(&renderer);
 
-        let diffuse_bytes = include_bytes!("../res/textures/8pxBlocks.png");
-        let diffuse_texture = texture::Texture::from_bytes(
-            &renderer.device,
-            &renderer.queue,
-            diffuse_bytes,
-            "block_atlas",
-        )
-        .unwrap();
+        let diffuse_bind_group =
+            State::create_diffuse_bind_group(&renderer, &texture_bind_group_layout);
 
-        let texture_bind_group_layout =
-            renderer
-                .device
-                .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                    entries: &[
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 0,
-                            visibility: wgpu::ShaderStages::FRAGMENT,
-                            ty: wgpu::BindingType::Texture {
-                                multisampled: false,
-                                view_dimension: wgpu::TextureViewDimension::D2,
-                                sample_type: wgpu::TextureSampleType::Float { filterable: true },
-                            },
-                            count: None,
-                        },
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 1,
-                            visibility: wgpu::ShaderStages::FRAGMENT,
-                            // This should match the filterable field of the
-                            // corresponding Texture entry above.
-                            ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
-                            count: None,
-                        },
-                    ],
-                    label: Some("texture_bind_group_layout"),
-                });
-
-        let diffuse_bind_group = renderer
-            .device
-            .create_bind_group(&wgpu::BindGroupDescriptor {
-                layout: &texture_bind_group_layout,
-                entries: &[
-                    wgpu::BindGroupEntry {
-                        binding: 0,
-                        resource: wgpu::BindingResource::TextureView(&diffuse_texture.view),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 1,
-                        resource: wgpu::BindingResource::Sampler(&diffuse_texture.sampler),
-                    },
-                ],
-                label: Some("diffuse_bind_group"),
-            });
-
-        let shader = renderer
-            .device
-            .create_shader_module(wgpu::ShaderModuleDescriptor {
-                label: Some("Shader"),
-                source: wgpu::ShaderSource::Wgsl(include_str!("shader.wgsl").into()),
-            });
+        let shader = State::create_shader(&renderer);
 
         let camera = camera::Camera::new((0.0, 5.0, 10.0), cgmath::Deg(-90.0), cgmath::Deg(-20.0));
         let projection = camera::Projection::new(
@@ -253,9 +200,86 @@ impl State
             camera_uniform,
             camera_buffer,
             camera_bind_group,
-            mouse_pos: PhysicalPosition { x: 0.0, y: 0.0 },
             mouse_pressed: false,
         })
+    }
+
+
+
+    fn create_texture_bind_group_layout(renderer: &Renderer) -> BindGroupLayout
+    {
+        renderer
+            .device
+            .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                entries: &[
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 0,
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Texture {
+                            multisampled: false,
+                            view_dimension: wgpu::TextureViewDimension::D2,
+                            sample_type: wgpu::TextureSampleType::Float { filterable: true },
+                        },
+                        count: None,
+                    },
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 1,
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        // This should match the filterable field of the
+                        // corresponding Texture entry above.
+                        ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
+                        count: None,
+                    },
+                ],
+                label: Some("texture_bind_group_layout"),
+            })
+    }
+
+
+
+    fn create_diffuse_bind_group(
+        renderer: &Renderer,
+        texture_bind_group_layout: &BindGroupLayout,
+    ) -> wgpu::BindGroup
+    {
+        let diffuse_bytes = include_bytes!("../res/textures/8pxBlocks.png");
+        let diffuse_texture = texture::Texture::from_bytes(
+            &renderer.device,
+            &renderer.queue,
+            diffuse_bytes,
+            "block_atlas",
+        )
+        .unwrap();
+
+        renderer
+            .device
+            .create_bind_group(&wgpu::BindGroupDescriptor {
+                layout: &texture_bind_group_layout,
+                entries: &[
+                    wgpu::BindGroupEntry {
+                        binding: 0,
+                        resource: wgpu::BindingResource::TextureView(&diffuse_texture.view),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 1,
+                        resource: wgpu::BindingResource::Sampler(&diffuse_texture.sampler),
+                    },
+                ],
+                label: Some("diffuse_bind_group"),
+            })
+    }
+
+
+
+    fn create_shader(renderer: &Renderer) -> wgpu::ShaderModule
+    {
+        let shader = renderer
+            .device
+            .create_shader_module(wgpu::ShaderModuleDescriptor {
+                label: Some("Shader"),
+                source: wgpu::ShaderSource::Wgsl(include_str!("shader.wgsl").into()),
+            });
+        shader
     }
 
 
@@ -308,8 +332,8 @@ impl State
                     resolve_target: None,
                     ops: wgpu::Operations {
                         load: wgpu::LoadOp::Clear(wgpu::Color {
-                            r: self.mouse_pos.x / self.renderer.config.width as f64,
-                            g: self.mouse_pos.y / self.renderer.config.height as f64,
+                            r: 0.4,
+                            g: 0.1,
                             b: 0.3,
                             a: 1.0,
                         }),

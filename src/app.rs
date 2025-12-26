@@ -1,4 +1,8 @@
-use std::sync::Arc;
+use crate::state::State;
+use std::{
+    sync::Arc,
+    time::Instant,
+};
 use winit::{
     application::ApplicationHandler,
     event::{
@@ -12,14 +16,12 @@ use winit::{
     window::Window,
 };
 
-use crate::state::State;
-
 
 
 pub struct App
 {
     state: Option<State>,
-    last_time: std::time::Instant,
+    last_time: Instant,
 }
 
 
@@ -30,7 +32,7 @@ impl App
     {
         Self {
             state: None,
-            last_time: instant::Instant::now(),
+            last_time: Instant::now(),
         }
     }
 }
@@ -44,9 +46,27 @@ impl ApplicationHandler<State> for App
         #[allow(unused_mut)]
         let mut window_attributes = Window::default_attributes();
 
-        let window = Arc::new(event_loop.create_window(window_attributes).unwrap());
+        let window = match event_loop.create_window(window_attributes)
+        {
+            Ok(window) => Arc::new(window),
+            Err(error) =>
+            {
+                log::error!("Failed to create window: {error}");
+                event_loop.exit();
+                return;
+            }
+        };
 
-        self.state = Some(pollster::block_on(State::new(window)).unwrap());
+        self.state = match pollster::block_on(State::new(window))
+        {
+            Ok(state) => Some(state),
+            Err(error) =>
+            {
+                log::error!("Failed to create state: {error}");
+                event_loop.exit();
+                return;
+            }
+        };
     }
 
 
@@ -66,10 +86,7 @@ impl ApplicationHandler<State> for App
         event: DeviceEvent,
     )
     {
-        let state = if let Some(state) = &mut self.state
-        {
-            state
-        }
+        let Some(state) = &mut self.state
         else
         {
             return;
@@ -108,7 +125,7 @@ impl ApplicationHandler<State> for App
             WindowEvent::RedrawRequested =>
             {
                 let dt = self.last_time.elapsed();
-                self.last_time = instant::Instant::now();
+                self.last_time = Instant::now();
                 state.update(dt);
                 match state.render()
                 {
@@ -149,13 +166,6 @@ impl ApplicationHandler<State> for App
                 ..
             } => state.handle_key(event_loop, code, key_state.is_pressed()),
 
-            WindowEvent::CursorMoved {
-                device_id: _device_id,
-                position,
-            } =>
-            {
-                state.mouse_pos = position;
-            }
             _ => (),
         }
     }

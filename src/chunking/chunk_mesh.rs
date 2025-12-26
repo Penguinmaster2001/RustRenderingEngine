@@ -16,166 +16,10 @@ use crate::{
     vertex::TextureVertex,
 };
 use cgmath::{
-    EuclideanSpace,
     Point3,
     Vector3,
 };
 use wgpu::util::DeviceExt;
-
-
-
-fn vert_index(x: u8, y: u8, z: u8) -> u32
-{
-    ((((x as u32) * (CHUNK_BLOCK_SIZE + 1) as u32) + y as u32) * (CHUNK_BLOCK_SIZE + 1) as u32)
-        + z as u32
-}
-
-
-
-fn create_vert_at(x: u8, y: u8, z: u8, chunk: &Chunk) -> TextureVertex
-{
-    let offset: Vector3<f32> = (BLOCK_SIZE * Vector3::new(x as f32, y as f32, z as f32))
-        + (CHUNK_WORLD_SIZE * chunk.world_offset.to_vec().cast().unwrap());
-
-    TextureVertex {
-        position: [offset.x, offset.y, offset.z],
-        tex_coords: [0.0, 0.0],
-    }
-}
-
-
-
-fn generate_faces(x: u8, y: u8, z: u8, chunk: &Chunk, indices: &mut Vec<u32>)
-{
-    if chunk.block_is_solid((x, y, z))
-    {
-        // Top Face
-        if y >= CHUNK_BLOCK_SIZE - 1 || !chunk.block_is_solid((x, y + 1, z))
-        {
-            indices.push(vert_index(x + 1, y + 1, z + 1));
-            indices.push(vert_index(x + 1, y + 1, z + 0));
-            indices.push(vert_index(x + 0, y + 1, z + 0));
-
-            indices.push(vert_index(x + 1, y + 1, z + 1));
-            indices.push(vert_index(x + 0, y + 1, z + 0));
-            indices.push(vert_index(x + 0, y + 1, z + 1));
-        }
-
-        // Bottom Face
-        if y == 0 || !chunk.block_is_solid((x, y - 1, z))
-        {
-            indices.push(vert_index(x + 0, y + 0, z + 0));
-            indices.push(vert_index(x + 1, y + 0, z + 0));
-            indices.push(vert_index(x + 1, y + 0, z + 1));
-
-            indices.push(vert_index(x + 0, y + 0, z + 0));
-            indices.push(vert_index(x + 1, y + 0, z + 1));
-            indices.push(vert_index(x + 0, y + 0, z + 1));
-        }
-
-        // Front Face
-        if x >= CHUNK_BLOCK_SIZE - 1 || !chunk.block_is_solid((x + 1, y, z))
-        {
-            indices.push(vert_index(x + 1, y + 1, z + 1));
-            indices.push(vert_index(x + 1, y + 0, z + 1));
-            indices.push(vert_index(x + 1, y + 0, z + 0));
-
-            indices.push(vert_index(x + 1, y + 1, z + 1));
-            indices.push(vert_index(x + 1, y + 0, z + 0));
-            indices.push(vert_index(x + 1, y + 1, z + 0));
-        }
-
-        // Back Face
-        if x == 0 || !chunk.block_is_solid((x - 1, y, z))
-        {
-            indices.push(vert_index(x + 0, y + 1, z + 1));
-            indices.push(vert_index(x + 0, y + 0, z + 0));
-            indices.push(vert_index(x + 0, y + 0, z + 1));
-
-            indices.push(vert_index(x + 0, y + 1, z + 1));
-            indices.push(vert_index(x + 0, y + 1, z + 0));
-            indices.push(vert_index(x + 0, y + 0, z + 0));
-        }
-
-        // Left Face
-        if z >= CHUNK_BLOCK_SIZE - 1 || !chunk.block_is_solid((x, y, z + 1))
-        {
-            indices.push(vert_index(x + 1, y + 1, z + 1));
-            indices.push(vert_index(x + 0, y + 1, z + 1));
-            indices.push(vert_index(x + 0, y + 0, z + 1));
-
-            indices.push(vert_index(x + 1, y + 1, z + 1));
-            indices.push(vert_index(x + 0, y + 0, z + 1));
-            indices.push(vert_index(x + 1, y + 0, z + 1));
-        }
-
-        // Right Face
-        if z == 0 || !chunk.block_is_solid((x, y, z - 1))
-        {
-            indices.push(vert_index(x + 1, y + 1, z + 0));
-            indices.push(vert_index(x + 0, y + 0, z + 0));
-            indices.push(vert_index(x + 0, y + 1, z + 0));
-
-            indices.push(vert_index(x + 1, y + 1, z + 0));
-            indices.push(vert_index(x + 1, y + 0, z + 0));
-            indices.push(vert_index(x + 0, y + 0, z + 0));
-        }
-    }
-}
-
-
-
-fn generate_indices(chunk: &Chunk) -> Vec<u32>
-{
-    let mut indices = vec![];
-
-    for x in 0..CHUNK_BLOCK_SIZE
-    {
-        for y in 0..CHUNK_BLOCK_SIZE
-        {
-            for z in 0..CHUNK_BLOCK_SIZE
-            {
-                generate_faces(x, y, z, chunk, &mut indices);
-            }
-        }
-    }
-
-    indices
-}
-
-
-
-fn generate_vertices(chunk: &Chunk) -> Vec<TextureVertex>
-{
-    let mut verts = vec![];
-
-    for x in 0..(CHUNK_BLOCK_SIZE + 1)
-    {
-        for y in 0..(CHUNK_BLOCK_SIZE + 1)
-        {
-            for z in 0..(CHUNK_BLOCK_SIZE + 1)
-            {
-                let offset = Vector3::new(
-                    x as f32 * BLOCK_SIZE,
-                    y as f32 * BLOCK_SIZE,
-                    z as f32 * BLOCK_SIZE,
-                ) + (CHUNK_WORLD_SIZE
-                    * Vector3::new(
-                        chunk.world_offset.x as f32,
-                        chunk.world_offset.y as f32,
-                        chunk.world_offset.z as f32,
-                    ));
-
-                verts.push(TextureVertex {
-                    position: [offset.x, offset.y, offset.z],
-                    tex_coords: [0.0, 0.0],
-                });
-            }
-        }
-    }
-
-    verts
-}
 
 
 
@@ -198,13 +42,16 @@ impl ChunkMeshData
             vertex_count: 0,
         };
 
-        for x in 0..CHUNK_BLOCK_SIZE
+        if !chunk.empty
         {
-            for y in 0..CHUNK_BLOCK_SIZE
+            for x in 0..CHUNK_BLOCK_SIZE
             {
-                for z in 0..CHUNK_BLOCK_SIZE
+                for y in 0..CHUNK_BLOCK_SIZE
                 {
-                    mesh_data.generate_block((x, y, z).into(), chunk);
+                    for z in 0..CHUNK_BLOCK_SIZE
+                    {
+                        mesh_data.generate_block((x, y, z).into(), chunk);
+                    }
                 }
             }
         }
@@ -409,15 +256,4 @@ impl ChunkMesh
             renderer,
         )
     }
-
-
-
-    // pub fn from_chunk(chunk: &Chunk, renderer: &Renderer) -> Self
-    // {
-    //     let vertices = generate_vertices(chunk);
-
-    //     let indices = generate_indices(chunk);
-
-    //     ChunkMesh::from_verts(&vertices, &indices, renderer)
-    // }
 }

@@ -22,6 +22,7 @@ pub struct Chunk
 {
     pub world_offset: Point3<i64>,
     blocks: [Block; CHUNK_BLOCK_COUNT as usize],
+    pub empty: bool,
 }
 
 
@@ -36,6 +37,7 @@ impl Chunk
         let mut chunk = Self {
             world_offset: *world_offset,
             blocks,
+            empty: true,
         };
 
         for x in 0..CHUNK_BLOCK_SIZE
@@ -72,8 +74,11 @@ impl Chunk
                         {
                             BlockType::Stone
                         };
+
                         Some(b)
                     });
+
+                    chunk.empty = false;
                 }
             }
         }
