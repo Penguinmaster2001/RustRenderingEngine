@@ -5,6 +5,7 @@ use winit::event_loop::EventLoop;
 
 pub mod app;
 pub mod chunking;
+pub mod input;
 pub mod instance;
 pub mod model;
 pub mod player;

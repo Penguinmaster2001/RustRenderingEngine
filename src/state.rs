@@ -1,5 +1,6 @@
 use crate::{
     chunking::chunk_renderer::DrawChunks,
+    input::InputHandler,
     player::Player,
     rendering::{
         Renderer,
@@ -41,9 +42,7 @@ pub struct State
     render_pipeline: wgpu::RenderPipeline,
     diffuse_bind_group: wgpu::BindGroup,
     depth_texture: Texture,
-    // camera: camera::Camera,
     projection: camera::Projection,
-    // pub camera_controller: camera::CameraController,
     pub player: Player,
     camera_uniform: camera::CameraUniform,
     camera_buffer: wgpu::Buffer,
@@ -334,7 +333,7 @@ impl State
                     resolve_target: None,
                     ops: wgpu::Operations {
                         load: wgpu::LoadOp::Clear(wgpu::Color {
-                            r: 0.4,
+                            r: 0.2,
                             g: 0.1,
                             b: 0.3,
                             a: 1.0,
@@ -392,8 +391,7 @@ impl State
         match button
         {
             MouseButton::Left => self.mouse_pressed = pressed,
-            _ =>
-            {}
+            _ => (),
         }
     }
 
@@ -408,7 +406,7 @@ impl State
 
     pub fn update(&mut self, dt: instant::Duration)
     {
-        self.player.update(dt);
+        self.player.update(dt, &self.voxel_world);
         self.camera_uniform
             .update_view_proj(&self.player.camera, &self.projection);
         self.renderer.queue.write_buffer(

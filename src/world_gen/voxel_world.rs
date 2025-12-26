@@ -1,6 +1,15 @@
+use cgmath::{
+    Point3,
+    Vector3,
+};
+
 use crate::{
     chunking::{
-        chunk::ChunkContainer,
+        blocks::Block,
+        chunk::{
+            Chunk,
+            ChunkContainer,
+        },
         chunk_mesh::ChunkMesh,
         chunk_renderer::ChunkRenderer,
     },
@@ -45,5 +54,16 @@ impl VoxelWorld
             self.chunk_renderer.add_chunk(&chunk, mesh);
             self.chunks.update_chunk(chunk);
         }
+    }
+
+
+
+    pub fn collide_line_segment(
+        &self,
+        start: Point3<f32>,
+        direction: Vector3<f32>,
+    ) -> Option<(&Chunk, &Block, Point3<f32>)>
+    {
+        todo!();
     }
 }

@@ -98,8 +98,7 @@ impl ApplicationHandler<State> for App
             {
                 state.player.camera_controller.handle_mouse(dx, dy);
             }
-            _ =>
-            {}
+            _ => (),
         }
     }
 
