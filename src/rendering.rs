@@ -4,6 +4,7 @@ use winit::window::Window;
 
 
 pub mod camera;
+pub mod lighting;
 
 
 

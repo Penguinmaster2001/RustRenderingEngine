@@ -5,6 +5,7 @@ use crate::{
     rendering::{
         Renderer,
         camera,
+        lighting::SphereLight,
     },
     texture::{
         self,
@@ -15,6 +16,11 @@ use crate::{
         Vertex,
     },
     world_gen::voxel_world::VoxelWorld,
+};
+use cgmath::{
+    Array,
+    Point3,
+    Vector4,
 };
 use std::sync::Arc;
 use wgpu::{
@@ -47,6 +53,7 @@ pub struct State
     camera_uniform: camera::CameraUniform,
     camera_buffer: wgpu::Buffer,
     camera_bind_group: wgpu::BindGroup,
+    light_bind_group: wgpu::BindGroup,
     voxel_world: VoxelWorld,
     pub mouse_pressed: bool,
 }
@@ -115,12 +122,28 @@ impl State
                 label: Some("camera_bind_group"),
             });
 
+        let sphere_light_buffer = SphereLight::create_sphere_light_buffer(
+            &[SphereLight::new(
+                Point3::new(10.0, 30.0, 10.0),
+                Vector4::from_value(1.0),
+                100.0,
+            )],
+            &renderer,
+        );
+
+        let (light_bind_group, sphere_light_bind_group_layout) =
+            SphereLight::create_sphere_light_bind_group(sphere_light_buffer, &renderer);
+
         let render_pipeline_layout =
             renderer
                 .device
                 .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                     label: Some("Render Pipeline Layout"),
-                    bind_group_layouts: &[&texture_bind_group_layout, &camera_bind_group_layout],
+                    bind_group_layouts: &[
+                        &texture_bind_group_layout,
+                        &camera_bind_group_layout,
+                        &sphere_light_bind_group_layout,
+                    ],
                     push_constant_ranges: &[],
                 });
 
@@ -139,17 +162,15 @@ impl State
 
                     vertex: wgpu::VertexState {
                         module: &shader,
-                        entry_point: Some("vs_main"), // 1.
-                        buffers: &[TextureVertex::desc() /* InstanceRaw::desc() */], // 2.
+                        entry_point: Some("vs_main"),
+                        buffers: &[TextureVertex::desc()],
                         compilation_options: wgpu::PipelineCompilationOptions::default(),
                     },
 
                     fragment: Some(wgpu::FragmentState {
-                        // 3.
                         module: &shader,
                         entry_point: Some("fs_main"),
                         targets: &[Some(wgpu::ColorTargetState {
-                            // 4.
                             format: renderer.config.format,
                             blend: Some(wgpu::BlendState::REPLACE),
                             write_mask: wgpu::ColorWrites::ALL,
@@ -158,9 +179,9 @@ impl State
                     }),
 
                     primitive: wgpu::PrimitiveState {
-                        topology: wgpu::PrimitiveTopology::TriangleList, // 1.
+                        topology: wgpu::PrimitiveTopology::TriangleList,
                         strip_index_format: None,
-                        front_face: wgpu::FrontFace::Ccw, // 2.
+                        front_face: wgpu::FrontFace::Ccw,
                         cull_mode: Some(wgpu::Face::Back),
                         // Setting this to anything other than Fill requires Features::NON_FILL_POLYGON_MODE
                         polygon_mode: wgpu::PolygonMode::Fill,
@@ -173,19 +194,19 @@ impl State
                     depth_stencil: Some(wgpu::DepthStencilState {
                         format: texture::Texture::DEPTH_FORMAT,
                         depth_write_enabled: true,
-                        depth_compare: wgpu::CompareFunction::Less, // 1.
-                        stencil: wgpu::StencilState::default(),     // 2.
+                        depth_compare: wgpu::CompareFunction::Less,
+                        stencil: wgpu::StencilState::default(),
                         bias: wgpu::DepthBiasState::default(),
                     }),
 
                     multisample: wgpu::MultisampleState {
-                        count: 1,                         // 2.
-                        mask: !0,                         // 3.
-                        alpha_to_coverage_enabled: false, // 4.
+                        count: 1,
+                        mask: !0,
+                        alpha_to_coverage_enabled: false,
                     },
 
-                    multiview: None, // 5.
-                    cache: None,     // 6.
+                    multiview: None,
+                    cache: None,
                 });
 
         let voxel_world = VoxelWorld::new();
@@ -201,6 +222,7 @@ impl State
             camera_uniform,
             camera_buffer,
             camera_bind_group,
+            light_bind_group,
             mouse_pressed: false,
         })
     }
@@ -213,6 +235,7 @@ impl State
             .device
             .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
                 entries: &[
+                    // Diffuse
                     wgpu::BindGroupLayoutEntry {
                         binding: 0,
                         visibility: wgpu::ShaderStages::FRAGMENT,
@@ -231,6 +254,25 @@ impl State
                         ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
                         count: None,
                     },
+                    // Specular
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 2,
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Texture {
+                            multisampled: false,
+                            view_dimension: wgpu::TextureViewDimension::D2,
+                            sample_type: wgpu::TextureSampleType::Float { filterable: true },
+                        },
+                        count: None,
+                    },
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 3,
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        // This should match the filterable field of the
+                        // corresponding Texture entry above.
+                        ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
+                        count: None,
+                    },
                 ],
                 label: Some("texture_bind_group_layout"),
             })
@@ -243,12 +285,21 @@ impl State
         texture_bind_group_layout: &BindGroupLayout,
     ) -> wgpu::BindGroup
     {
-        let diffuse_bytes = include_bytes!("../res/textures/8pxBlocks.png");
+        let diffuse_bytes = include_bytes!("../res/textures/8pxBlocksDiffuse.png");
         let diffuse_texture = texture::Texture::from_bytes(
             &renderer.device,
             &renderer.queue,
             diffuse_bytes,
-            "block_atlas",
+            "diffuse_atlas",
+        )
+        .unwrap();
+
+        let specular_bytes = include_bytes!("../res/textures/8pxBlocksSpecular.png");
+        let specular_texture = texture::Texture::from_bytes(
+            &renderer.device,
+            &renderer.queue,
+            specular_bytes,
+            "specular_atlas",
         )
         .unwrap();
 
@@ -264,6 +315,14 @@ impl State
                     wgpu::BindGroupEntry {
                         binding: 1,
                         resource: wgpu::BindingResource::Sampler(&diffuse_texture.sampler),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 2,
+                        resource: wgpu::BindingResource::TextureView(&specular_texture.view),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 3,
+                        resource: wgpu::BindingResource::Sampler(&specular_texture.sampler),
                     },
                 ],
                 label: Some("diffuse_bind_group"),
@@ -358,6 +417,7 @@ impl State
 
             render_pass.set_bind_group(0, &self.diffuse_bind_group, &[]);
             render_pass.set_bind_group(1, &self.camera_bind_group, &[]);
+            render_pass.set_bind_group(2, &self.light_bind_group, &[]);
 
             render_pass.draw_chunks(&self.voxel_world.chunk_renderer);
         }

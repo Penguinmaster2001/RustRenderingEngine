@@ -1,22 +1,62 @@
-// Vertex shader
+
 struct CameraUniform {
     view_proj: mat4x4<f32>,
     view_pos: vec4<f32>,
 };
 
-@group(1) @binding(0) // 1.
+
+
+struct SunLight {
+    direction: vec3<f32>,
+    color: vec3<f32>,
+    intensity: f32,
+};
+
+
+
+struct SphereLight {
+    position: vec3<f32>,
+    color: vec4<f32>,
+    intensity: f32,
+};
+
+
+
+@group(0) @binding(0)
+var t_diffuse: texture_2d<f32>;
+@group(0) @binding(1)
+var s_diffuse: sampler;
+@group(0) @binding(2)
+var t_specular: texture_2d<f32>;
+@group(0) @binding(3)
+var s_specular: sampler;
+
+
+
+@group(1) @binding(0)
 var<uniform> camera: CameraUniform;
+
+
+
+@group(2) @binding(0)
+var<uniform> sphereLights: array<SphereLight, 1>;
+
+
 
 struct VertexInput {
     @location(0) position: vec3<f32>,
     @location(1) tex_coords: vec2<f32>,
 }
 
+
+
 struct VertexOutput {
     @builtin(position) clip_position: vec4<f32>,
     @location(0) world_position: vec3<f32>,
     @location(1) tex_coords: vec2<f32>,
 }
+
+
 
 @vertex
 fn vs_main(
@@ -33,12 +73,6 @@ fn vs_main(
 
 
 
-// Fragment shader
-@group(0) @binding(0)
-var t_diffuse: texture_2d<f32>;
-@group(0) @binding(1)
-var s_diffuse: sampler;
-
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32>
 {
@@ -48,36 +82,37 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32>
     
     // return vec4(normal, 1.0);
     
-    let lightPos = camera.view_pos.xyz + (5.0 * vec3(-0.5, 1.5, 0.3));
+    let lightPos = sphereLights[0].position;
     var lightDir = lightPos - in.world_position;
     let distance = dot(lightDir, lightDir);
     lightDir = normalize(lightDir);
   
     let lambertian = max(dot(lightDir, normal), 0.0);
-    // var specular = 0.0;
+    var specular = 0.0;
+    var specular_color = textureSample(t_specular, s_specular, in.tex_coords);
   
-    // if (lambertian > 0.0)
-    // {
-    //   let viewDir = normalize(-in.world_position);
+    if (lambertian > 0.0)
+    {
+      let viewDir = normalize(camera.view_pos.xyz - in.world_position);
   
-    //   let halfDir = normalize(lightDir + viewDir);
-    //   let specAngle = max(dot(halfDir, normal), 0.0);
-    //   let shininess = 1.0;
-    //   specular = pow(specAngle, shininess);
-    // }
+      let halfDir = normalize(lightDir + viewDir);
+      let specAngle = max(dot(halfDir, normal), 0.0);
+      let shininess = mix(64.0, 2.0, specular_color.a);
+      specular = pow(specAngle, shininess);
+    }
     
     let ambientColor = 0.0 * vec4(1.0, 1.0, 1.0, 1.0);
     let diffuseColor = textureSample(t_diffuse, s_diffuse, in.tex_coords);
-    let lightColor = vec4(1.0);
-    let lightPower = 100.0;
-    // let specColor = vec4(1.0);
+    let lightColor = sphereLights[0].color;
+    let lightPower = sphereLights[0].intensity;
+    let specColor = specular * specular_color;
     let colorLinear = ambientColor
-                       + diffuseColor * lambertian * lightColor * lightPower / distance;
-                       // + specColor * specular * lightColor * lightPower / distance;
+                       + diffuseColor * lambertian * lightColor * lightPower / distance
+                       + specColor * specular * lightColor * lightPower / distance;
                        
-    let screenGamma = 1.5;
+    let screenGamma = 2.2;
     
-    let colorGammaCorrected = pow(colorLinear, vec4(1.0 / screenGamma));
+    let colorGammaCorrected = pow(max(colorLinear, vec4(0.0)), vec4(1.0 / screenGamma));
 
     return colorGammaCorrected;
 }

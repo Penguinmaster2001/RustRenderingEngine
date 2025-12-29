@@ -33,7 +33,7 @@ pub struct WorldGenerator
     pub load_radius: i64,
     job_tx: mpsc::Sender<ChunkJob>,
     result_rx: mpsc::Receiver<(Chunk, ChunkMeshData)>,
-    worker_handles: Vec<thread::JoinHandle<()>>,
+    _worker_handles: Vec<thread::JoinHandle<()>>,
     generated_chunks: HashSet<Point3<i64>>,
 }
 
@@ -89,7 +89,7 @@ impl WorldGenerator
             load_radius,
             job_tx,
             result_rx,
-            worker_handles,
+            _worker_handles: worker_handles,
             generated_chunks: HashSet::new(),
         }
     }
