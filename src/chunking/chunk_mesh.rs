@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use crate::{
     chunking::{
         blocks::{
@@ -10,6 +12,7 @@ use crate::{
             CHUNK_BLOCK_SIZE,
             CHUNK_WORLD_SIZE,
             Chunk,
+            ChunkContainer,
         },
     },
     rendering::Renderer,
@@ -50,7 +53,7 @@ impl ChunkMeshData
                 {
                     for z in 0..CHUNK_BLOCK_SIZE
                     {
-                        mesh_data.generate_block((x, y, z).into(), chunk);
+                        mesh_data.generate_block((x, y, z), chunk);
                     }
                 }
             }
@@ -61,8 +64,9 @@ impl ChunkMeshData
 
 
 
-    fn generate_block(&mut self, block_pos: Point3<u8>, chunk: &Chunk)
+    fn generate_block<P: Into<Point3<u8>>>(&mut self, block_pos: P, chunk: &Chunk)
     {
+        let block_pos = block_pos.into();
         let (x, y, z) = block_pos.into();
 
         let offset = Vector3::new(

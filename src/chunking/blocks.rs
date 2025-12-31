@@ -42,4 +42,23 @@ impl Block
     {
         Self { block_type }
     }
+
+
+
+    pub fn is_solid(&self) -> bool
+    {
+        self.block_type != BlockType::Empty
+    }
+
+
+
+    pub fn solid(block: Option<&Block>) -> bool
+    {
+        if let Some(block) = block
+        {
+            return block.is_solid();
+        }
+
+        false
+    }
 }

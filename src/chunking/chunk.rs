@@ -199,15 +199,26 @@ impl ChunkContainer
 
 
 
-    pub fn get_chunk(&self, pos: &Point3<i64>) -> Option<&Chunk>
+    pub fn get_chunk<C: Into<Point3<i64>>>(&self, pos: C) -> Option<&Chunk>
     {
-        self.chunks.get(pos)
+        self.chunks.get(&pos.into())
     }
 
 
 
-    pub fn chunk_at(&self, pos: &Point3<i64>) -> bool
+    pub fn chunk_at<C: Into<Point3<i64>>>(&self, pos: C) -> bool
     {
-        self.chunks.contains_key(pos)
+        self.chunks.contains_key(&pos.into())
+    }
+
+
+
+    pub fn get_block<C: Into<Point3<i64>>, B: Into<Point3<u8>>>(
+        &self,
+        chunk: C,
+        block: B,
+    ) -> Option<&Block>
+    {
+        self.get_chunk(chunk).and_then(|c| c.block_at(block))
     }
 }
