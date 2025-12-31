@@ -26,7 +26,8 @@ pub struct SphereLight
 
 impl SphereLight
 {
-    pub fn new(position: Point3<f32>, color: Vector4<f32>, intensity: f32) -> Self
+    pub fn new<P: Into<[f32; 3]>, C: Into<[f32; 4]>>(position: P, color: C, intensity: f32)
+    -> Self
     {
         Self {
             position: position.into(),
@@ -108,15 +109,16 @@ pub struct SunLight
 
 impl SunLight
 {
-    pub fn create_sphere_light_buffer(lights: &[SunLight], renderer: &Renderer) -> Buffer
+    pub fn new<D: Into<[f32; 3]>, C: Into<[f32; 4]>>(direction: D, color: C, intensity: f32)
+    -> Self
     {
-        renderer
-            .device
-            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("SunLightVB"),
-                contents: bytemuck::cast_slice(lights),
-                usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-            })
+        Self {
+            direction: direction.into(),
+            _padding0: 0,
+            color: color.into(),
+            intensity: intensity,
+            _padding1: [0, 0, 0],
+        }
     }
 }
 

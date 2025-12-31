@@ -8,7 +8,7 @@ struct CameraUniform {
 
 struct SunLight {
     direction: vec3<f32>,
-    color: vec3<f32>,
+    color: vec4<f32>,
     intensity: f32,
 };
 
@@ -92,6 +92,8 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32>
     
     // return vec4(normal, 1.0);
     
+    let view_direction = normalize(camera.view_pos.xyz - in.world_position);
+    
     var total_specular = 0.0;
     var total_lambertian = 0.0;
     var total_light_color = vec4(0.0);
@@ -100,18 +102,16 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32>
     for (var i = 0u; i < lights.sphere_light_count; i++)
     {
         let lightPos = lights.sphere_lights[i].position;
-        var lightDir = lightPos - in.world_position;
-        let distance = dot(lightDir, lightDir);
-        lightDir = normalize(lightDir);
+        var light_direction = lightPos - in.world_position;
+        let distance = dot(light_direction, light_direction);
+        light_direction = normalize(light_direction);
         
-        let lambertian = max(dot(lightDir, normal), 0.0);
+        let lambertian = max(dot(light_direction, normal), 0.0);
         total_lambertian += lambertian;
         
         if (lambertian > 0.0)
         {
-            let viewDir = normalize(camera.view_pos.xyz - in.world_position);
-        
-            let halfDir = normalize(lightDir + viewDir);
+            let halfDir = normalize(light_direction + view_direction);
             let specAngle = max(dot(halfDir, normal), 0.0);
             let shininess = mix(64.0, 2.0, specular_color.a);
             total_specular += pow(specAngle, shininess);
@@ -120,9 +120,27 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32>
         total_light_color += lights.sphere_lights[i].color * lights.sphere_lights[i].intensity / distance;
     }
     
-    let ambientColor = 0.0 * vec4(1.0, 1.0, 1.0, 1.0);
+    for (var i = 0u; i < lights.sun_light_count; i++)
+    {
+        let light_direction = -normalize(lights.sun_lights[i].direction);
+        
+        let lambertian = max(dot(light_direction, normal), 0.0);
+        total_lambertian += lambertian;
+        
+        if (lambertian > 0.0)
+        {
+            let halfDir = normalize(light_direction + view_direction);
+            let specAngle = max(dot(halfDir, normal), 0.0);
+            let shininess = mix(64.0, 2.0, specular_color.a);
+            total_specular += pow(specAngle, shininess);
+        }
+        
+        total_light_color += lights.sun_lights[i].color * lights.sun_lights[i].intensity;
+    }
+    
+    let ambientColor = 0.01 * vec4(1.0, 1.0, 1.0, 1.0);
     let diffuseColor = textureSample(t_diffuse, s_diffuse, in.tex_coords);
-    let color_linear = ambientColor
+    let color_linear = ambientColor * diffuseColor
                      + (diffuseColor * total_lambertian + specular_color * total_specular)
                         * total_light_color;
                        

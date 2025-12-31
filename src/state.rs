@@ -8,6 +8,7 @@ use crate::{
         lighting::{
             LightUniform,
             SphereLight,
+            SunLight,
         },
     },
     texture::{
@@ -126,7 +127,11 @@ impl State
             });
 
         let sphere_lights = &[
-            SphereLight::new(Point3::new(0.0, 30.0, 0.0), Vector4::from_value(1.0), 100.0),
+            SphereLight::new(
+                Point3::new(0.0, 30.0, 0.0),
+                Vector4::new(1.0, 1.0, 1.0, 1.0),
+                100.0,
+            ),
             SphereLight::new(
                 Point3::new(30.0, 30.0, 0.0),
                 Vector4::new(1.0, 0.0, 0.0, 1.0),
@@ -142,14 +147,14 @@ impl State
                 Vector4::new(0.0, 0.0, 1.0, 1.0),
                 100.0,
             ),
-            SphereLight::new(
-                Point3::new(120.0, 30.0, 0.0),
-                -Vector4::new(1.0, 1.0, 1.0, -1.0),
-                30.0,
-            ),
         ];
 
-        let light_uniform = LightUniform::new(sphere_lights, &[]);
+        let sun_lights = &[
+            SunLight::new((8.0, -12.0, 3.0), (1.0, 0.8, 0.2, 1.0), 0.5),
+            SunLight::new((-8.0, -12.0, -2.0), (0.2, 0.8, 1.0, 1.0), 0.2),
+        ];
+
+        let light_uniform = LightUniform::new(sphere_lights, sun_lights);
         let light_buffer = light_uniform.create_light_buffer(&renderer);
 
         let (light_bind_group, light_bind_group_layout) =
