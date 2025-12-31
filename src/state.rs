@@ -5,7 +5,10 @@ use crate::{
     rendering::{
         Renderer,
         camera,
-        lighting::SphereLight,
+        lighting::{
+            LightUniform,
+            SphereLight,
+        },
     },
     texture::{
         self,
@@ -122,17 +125,17 @@ impl State
                 label: Some("camera_bind_group"),
             });
 
-        let sphere_light_buffer = SphereLight::create_sphere_light_buffer(
-            &[SphereLight::new(
-                Point3::new(10.0, 30.0, 10.0),
-                Vector4::from_value(1.0),
-                100.0,
-            )],
-            &renderer,
-        );
+        let sphere_lights = &[SphereLight::new(
+            Point3::new(10.0, 30.0, 10.0),
+            Vector4::from_value(1.0),
+            100.0,
+        )];
 
-        let (light_bind_group, sphere_light_bind_group_layout) =
-            SphereLight::create_sphere_light_bind_group(sphere_light_buffer, &renderer);
+        let light_uniform = LightUniform::new(sphere_lights, &[]);
+        let light_buffer = light_uniform.create_light_buffer(&renderer);
+
+        let (light_bind_group, light_bind_group_layout) =
+            LightUniform::create_light_bind_group(light_buffer, &renderer);
 
         let render_pipeline_layout =
             renderer
@@ -142,7 +145,7 @@ impl State
                     bind_group_layouts: &[
                         &texture_bind_group_layout,
                         &camera_bind_group_layout,
-                        &sphere_light_bind_group_layout,
+                        &light_bind_group_layout,
                     ],
                     push_constant_ranges: &[],
                 });

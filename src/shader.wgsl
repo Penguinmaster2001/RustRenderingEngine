@@ -22,6 +22,18 @@ struct SphereLight {
 
 
 
+struct Lights
+{
+    sphere_lights: array<SphereLight, 16>,
+    sphere_light_count: u32,
+    // _padding0: [u32; 3],
+    sun_lights: array<SunLight, 2>,
+    sun_light_count: u32,
+    // _padding1: [u32; 3],
+}
+
+
+
 @group(0) @binding(0)
 var t_diffuse: texture_2d<f32>;
 @group(0) @binding(1)
@@ -39,7 +51,8 @@ var<uniform> camera: CameraUniform;
 
 
 @group(2) @binding(0)
-var<uniform> sphereLights: array<SphereLight, 1>;
+var<uniform> lights: Lights;
+// var<uniform> lights.sphere_lights: array<SphereLight, 1>;
 
 
 
@@ -82,7 +95,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32>
     
     // return vec4(normal, 1.0);
     
-    let lightPos = sphereLights[0].position;
+    let lightPos = lights.sphere_lights[0].position;
     var lightDir = lightPos - in.world_position;
     let distance = dot(lightDir, lightDir);
     lightDir = normalize(lightDir);
@@ -103,8 +116,8 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32>
     
     let ambientColor = 0.0 * vec4(1.0, 1.0, 1.0, 1.0);
     let diffuseColor = textureSample(t_diffuse, s_diffuse, in.tex_coords);
-    let lightColor = sphereLights[0].color;
-    let lightPower = sphereLights[0].intensity;
+    let lightColor = lights.sphere_lights[0].color;
+    let lightPower = lights.sphere_lights[0].intensity;
     let specColor = specular * specular_color;
     let colorLinear = ambientColor
                        + diffuseColor * lambertian * lightColor * lightPower / distance
