@@ -146,37 +146,37 @@ impl LightUniform
     pub fn new(sphere_lights: &[SphereLight], sun_lights: &[SunLight]) -> Self
     {
         let mut sphere_light_uniforms = [SphereLight::zeroed(); MAX_SPHERE_LIGHTS];
-        let mut sphere_count = 0;
+        let mut sphere_light_count = 0;
         for light in sphere_lights
         {
-            if sphere_count >= MAX_SPHERE_LIGHTS
+            if sphere_light_count >= MAX_SPHERE_LIGHTS
             {
                 break;
             }
 
-            sphere_light_uniforms[sphere_count] = light.clone();
-            sphere_count += 1;
+            sphere_light_uniforms[sphere_light_count] = light.clone();
+            sphere_light_count += 1;
         }
 
         let mut sun_light_uniforms = [SunLight::zeroed(); MAX_SUN_LIGHTS];
-        let mut sun_count = 0;
+        let mut sun_light_count = 0;
         for light in sun_lights
         {
-            if sun_count >= MAX_SUN_LIGHTS
+            if sun_light_count >= MAX_SUN_LIGHTS
             {
                 break;
             }
 
-            sun_light_uniforms[sun_count] = light.clone();
-            sun_count += 1;
+            sun_light_uniforms[sun_light_count] = light.clone();
+            sun_light_count += 1;
         }
 
         Self {
             sphere_lights: sphere_light_uniforms,
-            sphere_light_count: sun_count as u32,
+            sphere_light_count: sphere_light_count as u32,
             _padding0: [0; 3],
             sun_lights: sun_light_uniforms,
-            sun_light_count: sun_count as u32,
+            sun_light_count: sun_light_count as u32,
             _padding1: [0; 3],
         }
     }

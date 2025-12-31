@@ -125,11 +125,29 @@ impl State
                 label: Some("camera_bind_group"),
             });
 
-        let sphere_lights = &[SphereLight::new(
-            Point3::new(10.0, 30.0, 10.0),
-            Vector4::from_value(1.0),
-            100.0,
-        )];
+        let sphere_lights = &[
+            SphereLight::new(Point3::new(0.0, 30.0, 0.0), Vector4::from_value(1.0), 100.0),
+            SphereLight::new(
+                Point3::new(30.0, 30.0, 0.0),
+                Vector4::new(1.0, 0.0, 0.0, 1.0),
+                100.0,
+            ),
+            SphereLight::new(
+                Point3::new(60.0, 30.0, 0.0),
+                Vector4::new(0.0, 1.0, 0.0, 1.0),
+                100.0,
+            ),
+            SphereLight::new(
+                Point3::new(90.0, 30.0, 0.0),
+                Vector4::new(0.0, 0.0, 1.0, 1.0),
+                100.0,
+            ),
+            SphereLight::new(
+                Point3::new(120.0, 30.0, 0.0),
+                -Vector4::new(1.0, 1.0, 1.0, -1.0),
+                30.0,
+            ),
+        ];
 
         let light_uniform = LightUniform::new(sphere_lights, &[]);
         let light_buffer = light_uniform.create_light_buffer(&renderer);

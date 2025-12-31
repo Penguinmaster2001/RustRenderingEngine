@@ -26,10 +26,8 @@ struct Lights
 {
     sphere_lights: array<SphereLight, 16>,
     sphere_light_count: u32,
-    // _padding0: [u32; 3],
     sun_lights: array<SunLight, 2>,
     sun_light_count: u32,
-    // _padding1: [u32; 3],
 }
 
 
@@ -52,7 +50,6 @@ var<uniform> camera: CameraUniform;
 
 @group(2) @binding(0)
 var<uniform> lights: Lights;
-// var<uniform> lights.sphere_lights: array<SphereLight, 1>;
 
 
 
@@ -95,37 +92,43 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32>
     
     // return vec4(normal, 1.0);
     
-    let lightPos = lights.sphere_lights[0].position;
-    var lightDir = lightPos - in.world_position;
-    let distance = dot(lightDir, lightDir);
-    lightDir = normalize(lightDir);
-  
-    let lambertian = max(dot(lightDir, normal), 0.0);
-    var specular = 0.0;
-    var specular_color = textureSample(t_specular, s_specular, in.tex_coords);
-  
-    if (lambertian > 0.0)
+    var total_specular = 0.0;
+    var total_lambertian = 0.0;
+    var total_light_color = vec4(0.0);
+    let specular_color = textureSample(t_specular, s_specular, in.tex_coords);
+    
+    for (var i = 0u; i < lights.sphere_light_count; i++)
     {
-      let viewDir = normalize(camera.view_pos.xyz - in.world_position);
-  
-      let halfDir = normalize(lightDir + viewDir);
-      let specAngle = max(dot(halfDir, normal), 0.0);
-      let shininess = mix(64.0, 2.0, specular_color.a);
-      specular = pow(specAngle, shininess);
+        let lightPos = lights.sphere_lights[i].position;
+        var lightDir = lightPos - in.world_position;
+        let distance = dot(lightDir, lightDir);
+        lightDir = normalize(lightDir);
+        
+        let lambertian = max(dot(lightDir, normal), 0.0);
+        total_lambertian += lambertian;
+        
+        if (lambertian > 0.0)
+        {
+            let viewDir = normalize(camera.view_pos.xyz - in.world_position);
+        
+            let halfDir = normalize(lightDir + viewDir);
+            let specAngle = max(dot(halfDir, normal), 0.0);
+            let shininess = mix(64.0, 2.0, specular_color.a);
+            total_specular += pow(specAngle, shininess);
+        }
+        
+        total_light_color += lights.sphere_lights[i].color * lights.sphere_lights[i].intensity / distance;
     }
     
     let ambientColor = 0.0 * vec4(1.0, 1.0, 1.0, 1.0);
     let diffuseColor = textureSample(t_diffuse, s_diffuse, in.tex_coords);
-    let lightColor = lights.sphere_lights[0].color;
-    let lightPower = lights.sphere_lights[0].intensity;
-    let specColor = specular * specular_color;
-    let colorLinear = ambientColor
-                       + diffuseColor * lambertian * lightColor * lightPower / distance
-                       + specColor * specular * lightColor * lightPower / distance;
+    let color_linear = ambientColor
+                     + (diffuseColor * total_lambertian + specular_color * total_specular)
+                        * total_light_color;
                        
-    let screenGamma = 2.2;
+    let screen_gamma = 2.2;
     
-    let colorGammaCorrected = pow(max(colorLinear, vec4(0.0)), vec4(1.0 / screenGamma));
+    let colorGammaCorrected = pow(max(color_linear, vec4(0.0)), vec4(1.0 / screen_gamma));
 
     return colorGammaCorrected;
 }
