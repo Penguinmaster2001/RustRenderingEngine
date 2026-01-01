@@ -8,6 +8,7 @@ pub mod chunking;
 pub mod input;
 pub mod instance;
 pub mod model;
+pub mod physics;
 pub mod player;
 pub mod rendering;
 pub mod resources;

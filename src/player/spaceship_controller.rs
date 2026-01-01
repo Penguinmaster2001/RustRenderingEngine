@@ -3,6 +3,7 @@ use crate::{
         InputHandler,
         input_settings::InputSettings,
     },
+    physics::physics_body_state::PhysicsBodyState,
     player::controller::Controller,
     rendering::camera::{
         self,
@@ -22,6 +23,9 @@ use winit::keyboard::KeyCode;
 pub struct SpaceshipController
 {
     controller: Controller<f32>,
+    forward: Vector3<f32>,
+    up: Vector3<f32>,
+    physics_state: PhysicsBodyState<f32>,
     input_settings: InputSettings,
 }
 
@@ -33,6 +37,9 @@ impl SpaceshipController
     {
         Self {
             controller: Controller::new(),
+            forward: Vector3::unit_x(),
+            up: Vector3::unit_y(),
+            physics_state: PhysicsBodyState::new(),
             input_settings,
         }
     }
