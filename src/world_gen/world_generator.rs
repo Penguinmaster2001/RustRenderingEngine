@@ -13,6 +13,7 @@ use std::{
     collections::HashSet,
     sync::{
         Arc,
+        Mutex,
         mpsc,
     },
     thread,
@@ -46,7 +47,7 @@ impl WorldGenerator
         let (job_tx, job_rx) = mpsc::channel::<ChunkJob>();
         let (result_tx, result_rx) = mpsc::channel::<(Chunk, ChunkMeshData)>();
 
-        let job_rx = Arc::new(std::sync::Mutex::new(job_rx));
+        let job_rx = Arc::new(Mutex::new(job_rx));
         let result_tx = Arc::new(result_tx);
 
         let mut worker_handles = Vec::new();
@@ -75,8 +76,10 @@ impl WorldGenerator
                         }
                     };
 
-                    let chunk = Chunk::from_offset(&job.pos);
+                    // let chunk = Chunk::from_offset(&job.pos);
+                    let chunk = Chunk::generate_planets(&job.pos);
                     let mesh_data = ChunkMeshData::from_chunk(&chunk);
+                    // println!("Chunk done!");
 
                     let _ = result_tx.send((chunk, mesh_data));
                 }

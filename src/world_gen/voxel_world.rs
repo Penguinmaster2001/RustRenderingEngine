@@ -36,7 +36,7 @@ impl VoxelWorld
         Self {
             chunks: ChunkContainer::new(),
             chunk_renderer: ChunkRenderer::new(),
-            generator: WorldGenerator::new(20, 6),
+            generator: WorldGenerator::new(20, 8),
         }
     }
 
@@ -44,7 +44,7 @@ impl VoxelWorld
 
     pub fn update(&mut self, player: &Player, renderer: &Renderer, dt: instant::Duration)
     {
-        self.generator.generate_chunks(&player.position, 6);
+        self.generator.generate_chunks(&player.position, 4);
 
         let generated_chunks = self.generator.drain_results();
 

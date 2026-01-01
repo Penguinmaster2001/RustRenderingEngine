@@ -35,9 +35,9 @@ pub const BLOCK_FACE_DATA: [[Vector3<f32>; 4]; 6] = [
         Vector3::new(-0.5,  0.5,  0.5), // bottomleft   (x+0,y+1,z+1)
     ],
     [ // Bottom (y-)
-        Vector3::new( 0.5, -0.5,  0.5), // topleft      (x+1,y+0,z+1)
-        Vector3::new( 0.5, -0.5, -0.5), // topright     (x+1,y+0,z+0)
         Vector3::new(-0.5, -0.5, -0.5), // bottomright  (x+0,y+0,z+0)
+        Vector3::new( 0.5, -0.5, -0.5), // topright     (x+1,y+0,z+0)
+        Vector3::new( 0.5, -0.5,  0.5), // topleft      (x+1,y+0,z+1)
         Vector3::new(-0.5, -0.5,  0.5), // bottomleft   (x+0,y+0,z+1)
     ],
 ];

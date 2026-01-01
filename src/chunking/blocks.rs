@@ -18,12 +18,32 @@ pub enum BlockFace
 
 
 
-#[derive(Clone, Copy, PartialEq)]
+#[repr(u8)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub enum BlockType
 {
     Empty,
     Grass,
     Stone,
+    Max,
+}
+
+
+
+impl TryFrom<u8> for BlockType
+{
+    type Error = ();
+
+    fn try_from(value: u8) -> Result<Self, Self::Error>
+    {
+        match value
+        {
+            0 => Ok(BlockType::Empty),
+            1 => Ok(BlockType::Grass),
+            2 => Ok(BlockType::Stone),
+            _ => Err(()),
+        }
+    }
 }
 
 

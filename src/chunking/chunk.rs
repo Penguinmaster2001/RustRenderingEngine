@@ -4,7 +4,10 @@ use crate::{
         Block,
         BlockType,
     },
-    world_gen::world_noise::HeightNoise,
+    world_gen::world_noise::{
+        HeightNoise,
+        PlanetNoise,
+    },
 };
 use cgmath::Point3;
 use std::collections::HashMap;
@@ -79,6 +82,50 @@ impl Chunk
                     });
 
                     chunk.empty = false;
+                }
+            }
+        }
+
+        chunk
+    }
+
+
+
+    pub fn generate_planets(world_offset: &Point3<i64>) -> Self
+    {
+        let block_noise = PlanetNoise::new(); //HeightMap::new();
+        let blocks = [Block::new(BlockType::Empty); CHUNK_BLOCK_COUNT as usize];
+
+        let mut chunk = Self {
+            world_offset: *world_offset,
+            blocks,
+            empty: true,
+        };
+
+        for x in 0..CHUNK_BLOCK_SIZE
+        {
+            for z in 0..CHUNK_BLOCK_SIZE
+            {
+                for y in 0..CHUNK_BLOCK_SIZE
+                {
+                    let block_type = block_noise.get((
+                        (x as f32 * BLOCK_SIZE) as i64
+                            + (chunk.world_offset.x as f32 * CHUNK_BLOCK_SIZE as f32 * BLOCK_SIZE)
+                                as i64,
+                        (y as f32 * BLOCK_SIZE) as i64
+                            + (chunk.world_offset.y as f32 * CHUNK_BLOCK_SIZE as f32 * BLOCK_SIZE)
+                                as i64,
+                        (z as f32 * BLOCK_SIZE) as i64
+                            + (chunk.world_offset.z as f32 * CHUNK_BLOCK_SIZE as f32 * BLOCK_SIZE)
+                                as i64,
+                    ));
+                    chunk.block_at_mut(x, y, z).and_then(|b| {
+                        b.block_type = block_type;
+
+                        Some(b)
+                    });
+
+                    chunk.empty &= block_type == BlockType::Empty;
                 }
             }
         }
