@@ -22,7 +22,6 @@ use crate::{
     world_gen::voxel_world::VoxelWorld,
 };
 use cgmath::{
-    Array,
     Point3,
     Vector4,
 };

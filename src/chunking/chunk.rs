@@ -4,9 +4,10 @@ use crate::{
         Block,
         BlockType,
     },
-    world_gen::world_noise::{
-        HeightNoise,
-        PlanetNoise,
+    world_gen::{
+        noise_source::NoiseSource,
+        planet_noise::PlanetNoise,
+        world_noise::HeightNoise,
     },
 };
 use cgmath::Point3;
@@ -34,7 +35,7 @@ impl Chunk
 {
     pub fn from_offset(world_offset: &Point3<i64>) -> Self
     {
-        let height_map = HeightNoise::new(); //HeightMap::new();
+        let height_map = HeightNoise::new();
         let blocks = [Block::new(BlockType::Empty); CHUNK_BLOCK_COUNT as usize];
 
         let mut chunk = Self {
@@ -93,7 +94,7 @@ impl Chunk
 
     pub fn generate_planets(world_offset: &Point3<i64>) -> Self
     {
-        let block_noise = PlanetNoise::new(); //HeightMap::new();
+        let block_noise = PlanetNoise::new();
         let blocks = [Block::new(BlockType::Empty); CHUNK_BLOCK_COUNT as usize];
 
         let mut chunk = Self {
