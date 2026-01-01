@@ -79,7 +79,6 @@ impl WorldGenerator
                     // let chunk = Chunk::from_offset(&job.pos);
                     let chunk = Chunk::generate_planets(&job.pos);
                     let mesh_data = ChunkMeshData::from_chunk(&chunk);
-                    // println!("Chunk done!");
 
                     let _ = result_tx.send((chunk, mesh_data));
                 }
@@ -114,7 +113,7 @@ impl WorldGenerator
                     {
                         continue;
                     }
-                    for mut y in 0..=(2 * radius)
+                    for mut y in 0..=(2 * self.load_radius)
                     {
                         if y % 2 == 0
                         {
