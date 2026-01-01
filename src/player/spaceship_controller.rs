@@ -19,7 +19,7 @@ use winit::keyboard::KeyCode;
 
 
 
-pub struct PlayerController
+pub struct SpaceshipController
 {
     controller: Controller<f32>,
     input_settings: InputSettings,
@@ -27,7 +27,7 @@ pub struct PlayerController
 
 
 
-impl PlayerController
+impl SpaceshipController
 {
     pub fn new(input_settings: InputSettings) -> Self
     {
@@ -76,7 +76,7 @@ impl PlayerController
 
 
 
-impl InputHandler for PlayerController
+impl InputHandler for SpaceshipController
 {
     fn handle_mouse_movement(&mut self, mouse_dx: f64, mouse_dy: f64) -> bool
     {

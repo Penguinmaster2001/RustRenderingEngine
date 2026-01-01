@@ -3,7 +3,7 @@ use crate::{
         InputHandler,
         input_settings::InputSettings,
     },
-    player::player_controller::PlayerController,
+    player::spaceship_controller::SpaceshipController,
     rendering::camera::Camera,
     world_gen::voxel_world::VoxelWorld,
 };
@@ -18,6 +18,7 @@ use winit::keyboard::KeyCode;
 
 pub mod controller;
 pub mod player_controller;
+pub mod spaceship_controller;
 
 
 
@@ -26,7 +27,7 @@ pub struct Player
     pub position: Point3<f32>,
     pub velocity: Vector3<f32>,
     pub camera: Camera,
-    controller: PlayerController,
+    controller: SpaceshipController,
 }
 
 
@@ -40,16 +41,16 @@ impl Player
             position,
             velocity: Vector3::zero(),
             camera: Camera::new(position, cgmath::Deg(-90.0), cgmath::Deg(-20.0)),
-            controller: PlayerController::new(InputSettings {
-                sensitivity: 1.8,
-                speed: 15.0,
+            controller: SpaceshipController::new(InputSettings {
+                sensitivity: 1.5,
+                speed: 25.0,
             }),
         }
     }
 
 
 
-    pub fn update(&mut self, dt: instant::Duration, world: &VoxelWorld)
+    pub fn update(&mut self, dt: instant::Duration, _world: &VoxelWorld)
     {
         self.update_camera(dt);
     }

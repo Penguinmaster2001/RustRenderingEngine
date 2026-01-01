@@ -1,14 +1,28 @@
-use cgmath::*;
+use crate::rendering::Renderer;
+use cgmath::{
+    InnerSpace,
+    Matrix4,
+    Point3,
+    Rad,
+    SquareMatrix,
+    Vector3,
+    Vector4,
+    perspective,
+};
 use std::f32::consts::FRAC_PI_2;
+use wgpu::{
+    Buffer,
+    util::DeviceExt,
+};
 
 
 
 #[rustfmt::skip]
-pub const OPENGL_TO_WGPU_MATRIX: cgmath::Matrix4<f32> = cgmath::Matrix4::from_cols(
-    cgmath::Vector4::new(1.0, 0.0, 0.0, 0.0),
-    cgmath::Vector4::new(0.0, 1.0, 0.0, 0.0),
-    cgmath::Vector4::new(0.0, 0.0, 0.5, 0.0),
-    cgmath::Vector4::new(0.0, 0.0, 0.5, 1.0),
+pub const OPENGL_TO_WGPU_MATRIX: Matrix4<f32> = Matrix4::from_cols(
+    Vector4::new(1.0, 0.0, 0.0, 0.0),
+    Vector4::new(0.0, 1.0, 0.0, 0.0),
+    Vector4::new(0.0, 0.0, 0.5, 0.0),
+    Vector4::new(0.0, 0.0, 0.5, 1.0),
 );
 
 
@@ -33,7 +47,7 @@ impl CameraUniform
     {
         Self {
             view_position: [0.0; 4],
-            view_projection: cgmath::Matrix4::identity().into(),
+            view_projection: Matrix4::identity().into(),
         }
     }
 
@@ -43,6 +57,57 @@ impl CameraUniform
     {
         self.view_position = camera.position.to_homogeneous().into();
         self.view_projection = (projection.calc_matrix() * camera.calc_matrix()).into()
+    }
+
+
+
+    pub fn create_camera_buffer(&self, renderer: &Renderer) -> wgpu::Buffer
+    {
+        renderer
+            .device
+            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("Camera Buffer"),
+                contents: bytemuck::cast_slice(&[*self]),
+                usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            })
+    }
+
+
+
+    pub fn create_camera_bind_group(
+        camera_buffer: &Buffer,
+        renderer: &Renderer,
+    ) -> (wgpu::BindGroup, wgpu::BindGroupLayout)
+    {
+        let camera_bind_group_layout =
+            renderer
+                .device
+                .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                    entries: &[wgpu::BindGroupLayoutEntry {
+                        binding: 0,
+                        visibility: wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Uniform,
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
+                    }],
+                    label: Some("camera_bind_group_layout"),
+                });
+
+        let camera_bind_group = renderer
+            .device
+            .create_bind_group(&wgpu::BindGroupDescriptor {
+                layout: &camera_bind_group_layout,
+                entries: &[wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: camera_buffer.as_entire_binding(),
+                }],
+                label: Some("camera_bind_group"),
+            });
+
+        (camera_bind_group, camera_bind_group_layout)
     }
 }
 
@@ -79,6 +144,7 @@ impl Camera
     {
         let (sin_pitch, cos_pitch) = self.pitch.0.sin_cos();
         let (sin_yaw, cos_yaw) = self.yaw.0.sin_cos();
+
 
         Matrix4::look_to_rh(
             self.position,

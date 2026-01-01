@@ -4,7 +4,10 @@ use crate::{
     player::Player,
     rendering::{
         Renderer,
-        camera,
+        camera::{
+            self,
+            CameraUniform,
+        },
         lighting::{
             LightUniform,
             SphereLight,
@@ -26,10 +29,7 @@ use cgmath::{
     Vector4,
 };
 use std::sync::Arc;
-use wgpu::{
-    BindGroupLayout,
-    util::DeviceExt,
-};
+use wgpu::BindGroupLayout;
 use winit::{
     event::{
         MouseButton,
@@ -77,6 +77,8 @@ impl State
 
         let shader = State::create_shader(&renderer);
 
+        let player = Player::new((0.0, 0.0, 0.0));
+
         let projection = camera::Projection::new(
             renderer.config.width,
             renderer.config.height,
@@ -84,46 +86,14 @@ impl State
             0.01,
             1000.0,
         );
-        let player = Player::new((0.0, 0.0, 0.0));
 
         let mut camera_uniform = camera::CameraUniform::new();
         camera_uniform.update_view_proj(&player.camera, &projection);
 
-        let camera_buffer = renderer
-            .device
-            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("Camera Buffer"),
-                contents: bytemuck::cast_slice(&[camera_uniform]),
-                usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-            });
+        let camera_buffer = camera_uniform.create_camera_buffer(&renderer);
 
-        let camera_bind_group_layout =
-            renderer
-                .device
-                .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                    entries: &[wgpu::BindGroupLayoutEntry {
-                        binding: 0,
-                        visibility: wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT,
-                        ty: wgpu::BindingType::Buffer {
-                            ty: wgpu::BufferBindingType::Uniform,
-                            has_dynamic_offset: false,
-                            min_binding_size: None,
-                        },
-                        count: None,
-                    }],
-                    label: Some("camera_bind_group_layout"),
-                });
-
-        let camera_bind_group = renderer
-            .device
-            .create_bind_group(&wgpu::BindGroupDescriptor {
-                layout: &camera_bind_group_layout,
-                entries: &[wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: camera_buffer.as_entire_binding(),
-                }],
-                label: Some("camera_bind_group"),
-            });
+        let (camera_bind_group, camera_bind_group_layout) =
+            CameraUniform::create_camera_bind_group(&camera_buffer, &renderer);
 
         let sphere_lights = &[
             SphereLight::new(
@@ -157,7 +127,7 @@ impl State
         let light_buffer = light_uniform.create_light_buffer(&renderer);
 
         let (light_bind_group, light_bind_group_layout) =
-            LightUniform::create_light_bind_group(light_buffer, &renderer);
+            LightUniform::create_light_bind_group(&light_buffer, &renderer);
 
         let render_pipeline_layout =
             renderer

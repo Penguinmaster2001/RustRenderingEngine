@@ -1,9 +1,5 @@
 use crate::rendering::Renderer;
 use bytemuck::Zeroable;
-use cgmath::{
-    Point3,
-    Vector4,
-};
 use wgpu::{
     Buffer,
     util::DeviceExt,
@@ -199,7 +195,7 @@ impl LightUniform
 
 
     pub fn create_light_bind_group(
-        light_buffer: Buffer,
+        light_buffer: &Buffer,
         renderer: &Renderer,
     ) -> (wgpu::BindGroup, wgpu::BindGroupLayout)
     {
