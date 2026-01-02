@@ -7,6 +7,7 @@ pub mod app;
 pub mod chunking;
 pub mod input;
 pub mod instance;
+pub mod math;
 pub mod model;
 pub mod physics;
 pub mod player;

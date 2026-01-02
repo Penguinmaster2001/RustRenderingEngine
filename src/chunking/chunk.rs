@@ -10,7 +10,7 @@ use crate::{
         world_noise::HeightNoise,
     },
 };
-use cgmath::Point3;
+use nalgebra::Point3;
 use std::collections::HashMap;
 
 
@@ -224,16 +224,18 @@ impl ChunkContainer
 
     pub fn world_to_chunk(pos: &Point3<f32>) -> Point3<i64>
     {
-        (pos / (BLOCK_SIZE * CHUNK_BLOCK_SIZE as f32))
-            .cast()
-            .unwrap()
+        Point3::new(
+            (pos.x / (BLOCK_SIZE * CHUNK_BLOCK_SIZE as f32)) as i64,
+            (pos.y / (BLOCK_SIZE * CHUNK_BLOCK_SIZE as f32)) as i64,
+            (pos.z / (BLOCK_SIZE * CHUNK_BLOCK_SIZE as f32)) as i64,
+        )
     }
 
 
 
     pub fn chunk_to_world(pos: &Point3<i64>) -> Point3<f32>
     {
-        pos.cast().unwrap() * BLOCK_SIZE * CHUNK_BLOCK_SIZE as f32
+        pos.cast() * BLOCK_SIZE * CHUNK_BLOCK_SIZE as f32
     }
 
 

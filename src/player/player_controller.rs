@@ -9,11 +9,7 @@ use crate::{
         Camera,
     },
 };
-use cgmath::{
-    InnerSpace,
-    Rad,
-    Vector3,
-};
+use nalgebra::Vector3;
 use std::time::Duration;
 use winit::keyboard::KeyCode;
 
@@ -44,7 +40,7 @@ impl PlayerController
         let dt = dt.as_secs_f32();
 
         // Move forward/backward and left/right
-        let (yaw_sin, yaw_cos) = camera.yaw.0.sin_cos();
+        let (yaw_sin, yaw_cos) = camera.yaw.sin_cos();
         let forward = Vector3::new(yaw_cos, 0.0, yaw_sin).normalize();
         let right = Vector3::new(-yaw_sin, 0.0, yaw_cos).normalize();
         camera.position += forward * self.controller.get_forward() * self.input_settings.speed * dt;
@@ -55,19 +51,17 @@ impl PlayerController
         camera.position.y += self.controller.get_up() * self.input_settings.speed * dt;
 
         // Rotate
-        camera.yaw +=
-            Rad(self.controller.get_rotate_right()) * self.input_settings.sensitivity * dt;
-        camera.pitch +=
-            Rad(-self.controller.get_rotate_up()) * self.input_settings.sensitivity * dt;
+        camera.yaw += self.controller.get_rotate_right() * self.input_settings.sensitivity * dt;
+        camera.pitch += -self.controller.get_rotate_up() * self.input_settings.sensitivity * dt;
 
         // Keep the camera's angle from going too high/low.
-        if camera.pitch < -Rad(camera::SAFE_FRAC_PI_2)
+        if camera.pitch < -camera::SAFE_FRAC_PI_2
         {
-            camera.pitch = -Rad(camera::SAFE_FRAC_PI_2);
+            camera.pitch = -camera::SAFE_FRAC_PI_2;
         }
-        else if camera.pitch > Rad(camera::SAFE_FRAC_PI_2)
+        else if camera.pitch > camera::SAFE_FRAC_PI_2
         {
-            camera.pitch = Rad(camera::SAFE_FRAC_PI_2);
+            camera.pitch = camera::SAFE_FRAC_PI_2;
         }
 
         self.controller.reset_rotation();

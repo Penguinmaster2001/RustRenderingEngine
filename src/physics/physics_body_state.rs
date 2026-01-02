@@ -1,16 +1,13 @@
-use cgmath::{
-    BaseFloat,
-    EuclideanSpace,
-    One,
+use nalgebra::{
     Point3,
     Quaternion,
+    RealField,
     Vector3,
-    Zero,
 };
 
 
 
-pub struct PhysicsBodyState<S: BaseFloat>
+pub struct PhysicsBodyState<S: RealField>
 {
     position: Point3<S>,
     velocity: Vector3<S>,
@@ -22,17 +19,17 @@ pub struct PhysicsBodyState<S: BaseFloat>
 
 
 
-impl<S: BaseFloat> PhysicsBodyState<S>
+impl<S: RealField> PhysicsBodyState<S>
 {
     pub fn new() -> Self
     {
         Self {
             position: Point3::origin(),
-            velocity: Vector3::zero(),
-            acceleration: Vector3::zero(),
-            rotation: Quaternion::one(),
-            angular_velocity: Vector3::zero(),
-            angular_acceleration: Vector3::zero(),
+            velocity: Vector3::zeros(),
+            acceleration: Vector3::zeros(),
+            rotation: Quaternion::identity(),
+            angular_velocity: Vector3::zeros(),
+            angular_acceleration: Vector3::zeros(),
         }
     }
 

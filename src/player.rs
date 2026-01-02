@@ -3,14 +3,14 @@ use crate::{
         InputHandler,
         input_settings::InputSettings,
     },
+    math,
     player::spaceship_controller::SpaceshipController,
     rendering::camera::Camera,
     world_gen::voxel_world::VoxelWorld,
 };
-use cgmath::{
+use nalgebra::{
     Point3,
     Vector3,
-    Zero,
 };
 use winit::keyboard::KeyCode;
 
@@ -39,8 +39,12 @@ impl Player
         let position = position.into();
         Self {
             position,
-            velocity: Vector3::zero(),
-            camera: Camera::new(position, cgmath::Deg(-90.0), cgmath::Deg(-20.0)),
+            velocity: Vector3::zeros(),
+            camera: Camera::new(
+                position,
+                -90.0 * math::DEG_TO_RAD as f32,
+                -20.0 * math::DEG_TO_RAD as f32,
+            ),
             controller: SpaceshipController::new(InputSettings {
                 sensitivity: 1.5,
                 speed: 25.0,

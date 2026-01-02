@@ -1,15 +1,14 @@
-use cgmath::{
-    BaseNum,
+use nalgebra::{
+    RealField,
     Vector2,
     Vector3,
-    Zero,
 };
 use std::fmt::Debug;
 
 
 
 #[derive(Debug)]
-pub struct Controller<S: BaseNum>
+pub struct Controller<S: RealField + Copy>
 {
     movement: Vector3<S>,
     steering: Vector2<S>,
@@ -17,13 +16,13 @@ pub struct Controller<S: BaseNum>
 
 
 
-impl<S: BaseNum> Controller<S>
+impl<S: RealField + Copy> Controller<S>
 {
     pub fn new() -> Self
     {
         Self {
-            movement: Vector3::<S>::zero(),
-            steering: Vector2::<S>::zero(),
+            movement: Vector3::zeros(),
+            steering: Vector2::zeros(),
         }
     }
 
@@ -31,14 +30,14 @@ impl<S: BaseNum> Controller<S>
 
     pub fn reset_rotation(&mut self)
     {
-        self.steering.set_zero();
+        self.steering = Vector2::zeros();
     }
 
 
 
     pub fn reset_movement(&mut self)
     {
-        self.movement.set_zero();
+        self.movement = Vector3::zeros();
     }
 
 

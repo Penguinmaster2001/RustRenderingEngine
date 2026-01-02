@@ -1,6 +1,7 @@
 use crate::{
     chunking::chunk_renderer::DrawChunks,
     input::InputHandler,
+    math,
     player::Player,
     rendering::{
         Renderer,
@@ -24,7 +25,7 @@ use crate::{
     },
     world_gen::voxel_world::VoxelWorld,
 };
-use cgmath::{
+use nalgebra::{
     Point3,
     Vector4,
 };
@@ -77,12 +78,12 @@ impl State
 
         let shader = State::create_shader(&renderer);
 
-        let player = Player::new((0.0, 0.0, 0.0));
+        let player = Player::new([0.0, 0.0, 0.0]);
 
         let projection = camera::Projection::new(
             renderer.config.width,
             renderer.config.height,
-            cgmath::Deg(110.0),
+            110.0 * math::DEG_TO_RAD as f32,
             0.01,
             1000.0,
         );

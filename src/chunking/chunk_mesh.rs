@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use crate::{
     chunking::{
         blocks::{
@@ -12,13 +10,12 @@ use crate::{
             CHUNK_BLOCK_SIZE,
             CHUNK_WORLD_SIZE,
             Chunk,
-            ChunkContainer,
         },
     },
     rendering::Renderer,
     vertex::TextureVertex,
 };
-use cgmath::{
+use nalgebra::{
     Point3,
     Vector3,
 };
@@ -53,7 +50,7 @@ impl ChunkMeshData
                 {
                     for z in 0..CHUNK_BLOCK_SIZE
                     {
-                        mesh_data.generate_block((x, y, z), chunk);
+                        mesh_data.generate_block([x, y, z], chunk);
                     }
                 }
             }
@@ -67,7 +64,7 @@ impl ChunkMeshData
     fn generate_block<P: Into<Point3<u8>>>(&mut self, block_pos: P, chunk: &Chunk)
     {
         let block_pos = block_pos.into();
-        let (x, y, z) = block_pos.into();
+        let [x, y, z] = block_pos.into();
 
         let offset = Vector3::new(
             x as f32 * BLOCK_SIZE,
@@ -90,7 +87,7 @@ impl ChunkMeshData
             {
                 // Check adjacent chunk
             }
-            else if !chunk.block_is_solid((x - 1, y, z))
+            else if !chunk.block_is_solid([x - 1, y, z])
             {
                 self.add_face(block, BlockFace::Back, offset);
                 num_faces += 1;
@@ -101,7 +98,7 @@ impl ChunkMeshData
             {
                 // Check adjacent chunk
             }
-            else if !chunk.block_is_solid((x, y - 1, z))
+            else if !chunk.block_is_solid([x, y - 1, z])
             {
                 self.add_face(block, BlockFace::Bottom, offset);
                 num_faces += 1;
@@ -112,7 +109,7 @@ impl ChunkMeshData
             {
                 // Check adjacent chunk
             }
-            else if !chunk.block_is_solid((x, y, z - 1))
+            else if !chunk.block_is_solid([x, y, z - 1])
             {
                 self.add_face(block, BlockFace::Right, offset);
                 num_faces += 1;
@@ -126,7 +123,7 @@ impl ChunkMeshData
             {
                 // Check adjacent chunk
             }
-            else if let Some(block) = chunk.solid_block_at((x - 1, y, z))
+            else if let Some(block) = chunk.solid_block_at([x - 1, y, z])
             {
                 self.add_face(
                     block,
@@ -141,7 +138,7 @@ impl ChunkMeshData
             {
                 // Check adjacent chunk
             }
-            else if let Some(block) = chunk.solid_block_at((x, y - 1, z))
+            else if let Some(block) = chunk.solid_block_at([x, y - 1, z])
             {
                 self.add_face(
                     block,
@@ -156,7 +153,7 @@ impl ChunkMeshData
             {
                 // Check adjacent chunk
             }
-            else if let Some(block) = chunk.solid_block_at((x, y, z - 1))
+            else if let Some(block) = chunk.solid_block_at([x, y, z - 1])
             {
                 self.add_face(
                     block,

@@ -1,9 +1,8 @@
-use cgmath::Vector3;
-
 use crate::{
     chunking::blocks::BlockType,
     texture::Texture,
 };
+use nalgebra::Vector3;
 
 
 

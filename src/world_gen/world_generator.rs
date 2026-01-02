@@ -5,7 +5,7 @@ use crate::chunking::{
     },
     chunk_mesh::ChunkMeshData,
 };
-use cgmath::{
+use nalgebra::{
     Point3,
     Vector3,
 };

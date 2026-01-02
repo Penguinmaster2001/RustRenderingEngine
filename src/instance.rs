@@ -1,7 +1,15 @@
+use nalgebra::{
+    Matrix4,
+    UnitQuaternion,
+    Vector3,
+};
+
+
+
 pub struct Instance
 {
-    pub position: cgmath::Vector3<f32>,
-    pub rotation: cgmath::Quaternion<f32>,
+    pub position: Vector3<f32>,
+    pub rotation: UnitQuaternion<f32>,
 }
 
 
@@ -11,9 +19,10 @@ impl Instance
     pub fn to_raw(&self) -> InstanceRaw
     {
         InstanceRaw {
-            model: (cgmath::Matrix4::from_translation(self.position)
-                * cgmath::Matrix4::from(self.rotation))
-            .into(),
+            model: (Matrix4::new_translation(&self.position)
+                * self.rotation.to_rotation_matrix().to_homogeneous())
+            .data
+            .0, // * self.rotation,
         }
     }
 }

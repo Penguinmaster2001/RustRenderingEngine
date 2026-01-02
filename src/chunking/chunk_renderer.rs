@@ -1,6 +1,6 @@
 use crate::chunking::chunk::Chunk;
 use crate::chunking::chunk_mesh::ChunkMesh;
-use cgmath::Point3;
+use nalgebra::Point3;
 use std::collections::HashMap;
 
 
