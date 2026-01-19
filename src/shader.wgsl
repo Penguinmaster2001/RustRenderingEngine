@@ -138,7 +138,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32>
         total_light_color += lights.sun_lights[i].color * lights.sun_lights[i].intensity;
     }
     
-    let ambientColor = 0.01 * vec4(1.0, 1.0, 1.0, 1.0);
+    let ambientColor = 0.01 * vec4(0.01, 0.01, 0.02, 1.0);
     let diffuseColor = textureSample(t_diffuse, s_diffuse, in.tex_coords);
     let color_linear = ambientColor * diffuseColor
                      + (diffuseColor * total_lambertian + specular_color * total_specular)

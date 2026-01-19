@@ -30,6 +30,22 @@ pub enum BlockType
 
 
 
+impl BlockType
+{
+    pub fn mass(&self) -> f32
+    {
+        match self
+        {
+            BlockType::Empty => 0.0,
+            BlockType::Grass => 0.5,
+            BlockType::Stone => 1.0,
+            BlockType::Max => 0.0,
+        }
+    }
+}
+
+
+
 impl TryFrom<u8> for BlockType
 {
     type Error = ();

@@ -10,7 +10,10 @@ use crate::{
         world_noise::HeightNoise,
     },
 };
-use nalgebra::Point3;
+use nalgebra::{
+    Point3,
+    Vector3,
+};
 use std::collections::HashMap;
 
 
@@ -26,6 +29,8 @@ pub struct Chunk
 {
     pub world_offset: Point3<i64>,
     blocks: [Block; CHUNK_BLOCK_COUNT as usize],
+    pub center_of_mass: Vector3<f32>,
+    pub mass: f32,
     pub empty: bool,
 }
 
@@ -100,6 +105,8 @@ impl Chunk
         let mut chunk = Self {
             world_offset: *world_offset,
             blocks,
+            center_of_mass: Vector3::zeros(),
+            mass: 0.0,
             empty: true,
         };
 
@@ -127,10 +134,16 @@ impl Chunk
                     });
 
                     chunk.empty &= block_type == BlockType::Empty;
+
+                    let block_mass = block_type.mass();
+                    chunk.center_of_mass +=
+                        block_mass * Into::<Vector3<f32>>::into([x as f32, y as f32, z as f32]);
+                    chunk.mass += block_mass;
                 }
             }
         }
 
+        chunk.center_of_mass /= chunk.mass;
         chunk
     }
 
