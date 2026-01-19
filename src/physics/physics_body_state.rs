@@ -35,5 +35,19 @@ impl<S: RealField> PhysicsBodyState<S>
 
 
 
-    pub fn update(&mut self, dt: instant::Duration) {}
+    pub fn update(&mut self, _dt: instant::Duration) {}
+
+
+
+    pub fn translate<T: Into<Vector3<S>>>(&mut self, translation: T)
+    {
+        self.position += translation.into();
+    }
+
+
+
+    pub fn get_pos(&self) -> &Point3<S>
+    {
+        &self.position
+    }
 }

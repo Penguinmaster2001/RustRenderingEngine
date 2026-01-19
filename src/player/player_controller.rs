@@ -6,7 +6,7 @@ use crate::{
     player::controller::Controller,
     rendering::camera::{
         self,
-        Camera,
+        UprightCamera,
     },
 };
 use nalgebra::Vector3;
@@ -35,7 +35,7 @@ impl PlayerController
 
 
 
-    pub fn update_camera(&mut self, camera: &mut Camera, dt: Duration)
+    pub fn update_camera(&mut self, camera: &mut UprightCamera, dt: Duration)
     {
         let dt = dt.as_secs_f32();
 

@@ -5,7 +5,10 @@ use crate::{
     },
     math,
     player::spaceship_controller::SpaceshipController,
-    rendering::camera::Camera,
+    rendering::camera::{
+        FreeCamera,
+        UprightCamera,
+    },
     world_gen::voxel_world::VoxelWorld,
 };
 use nalgebra::{
@@ -26,7 +29,7 @@ pub struct Player
 {
     pub position: Point3<f32>,
     pub velocity: Vector3<f32>,
-    pub camera: Camera,
+    pub camera: FreeCamera,
     controller: SpaceshipController,
 }
 
@@ -40,10 +43,10 @@ impl Player
         Self {
             position,
             velocity: Vector3::zeros(),
-            camera: Camera::new(
+            camera: FreeCamera::new(
                 position,
-                -90.0 * math::DEG_TO_RAD as f32,
-                -20.0 * math::DEG_TO_RAD as f32,
+                Vector3::x_axis().into_inner(),
+                Vector3::y_axis().into_inner(),
             ),
             controller: SpaceshipController::new(InputSettings {
                 sensitivity: 1.5,

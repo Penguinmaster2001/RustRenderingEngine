@@ -4,8 +4,6 @@ use nalgebra::{
     Matrix4,
     Perspective3,
     Point3,
-    Transform,
-    Vector,
     Vector3,
     matrix,
     vector,
@@ -31,6 +29,17 @@ pub const SAFE_FRAC_PI_2: f32 = FRAC_PI_2 - 0.0001;
 
 
 
+pub trait Camera
+{
+    fn get_position(&self) -> &Point3<f32>;
+
+
+
+    fn calc_matrix(&self) -> Matrix4<f32>;
+}
+
+
+
 #[repr(C)]
 #[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct CameraUniform
@@ -53,9 +62,9 @@ impl CameraUniform
 
 
 
-    pub fn update_view_proj(&mut self, camera: &Camera, projection: &Projection)
+    pub fn update_view_proj<T: Camera>(&mut self, camera: &T, projection: &Projection)
     {
-        self.view_position = camera.position.to_homogeneous().into();
+        self.view_position = camera.get_position().to_homogeneous().into();
         self.view_projection = (projection.calc_matrix() * camera.calc_matrix()).into()
     }
 
@@ -114,7 +123,7 @@ impl CameraUniform
 
 
 #[derive(Debug)]
-pub struct Camera
+pub struct UprightCamera
 {
     pub position: Point3<f32>,
     pub yaw: f32,
@@ -123,7 +132,7 @@ pub struct Camera
 
 
 
-impl Camera
+impl UprightCamera
 {
     pub fn new<V: Into<Point3<f32>>, Y: Into<f32>, P: Into<f32>>(
         position: V,
@@ -137,10 +146,20 @@ impl Camera
             pitch: pitch.into(),
         }
     }
+}
 
 
 
-    pub fn calc_matrix(&self) -> Matrix4<f32>
+impl Camera for UprightCamera
+{
+    fn get_position(&self) -> &Point3<f32>
+    {
+        &self.position
+    }
+
+
+
+    fn calc_matrix(&self) -> Matrix4<f32>
     {
         let (sin_pitch, cos_pitch) = self.pitch.sin_cos();
         let (sin_yaw, cos_yaw) = self.yaw.sin_cos();
@@ -150,6 +169,51 @@ impl Camera
             &(&self.position + vector!(cos_pitch * cos_yaw, sin_pitch, cos_pitch * sin_yaw)),
             &Vector3::y_axis().into_inner(),
         )
+    }
+}
+
+
+
+#[derive(Debug)]
+pub struct FreeCamera
+{
+    pub position: Point3<f32>,
+    pub forward: Vector3<f32>,
+    pub up: Vector3<f32>,
+}
+
+
+
+impl FreeCamera
+{
+    pub fn new<V: Into<Point3<f32>>, F: Into<Vector3<f32>>, U: Into<Vector3<f32>>>(
+        position: V,
+        forward: F,
+        up: U,
+    ) -> Self
+    {
+        Self {
+            position: position.into(),
+            forward: forward.into(),
+            up: up.into(),
+        }
+    }
+}
+
+
+
+impl Camera for FreeCamera
+{
+    fn get_position(&self) -> &Point3<f32>
+    {
+        &self.position
+    }
+
+
+
+    fn calc_matrix(&self) -> Matrix4<f32>
+    {
+        Matrix::look_at_rh(&self.position, &(self.position + self.forward), &self.up)
     }
 }
 

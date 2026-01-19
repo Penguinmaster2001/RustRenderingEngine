@@ -1,8 +1,3 @@
-use nalgebra::{
-    Point3,
-    Vector3,
-};
-
 use crate::{
     chunking::{
         blocks::Block,
@@ -16,6 +11,10 @@ use crate::{
     player::Player,
     rendering::Renderer,
     world_gen::world_generator::WorldGenerator,
+};
+use nalgebra::{
+    Point3,
+    Vector3,
 };
 
 
@@ -36,13 +35,13 @@ impl VoxelWorld
         Self {
             chunks: ChunkContainer::new(),
             chunk_renderer: ChunkRenderer::new(),
-            generator: WorldGenerator::new(20, 8),
+            generator: WorldGenerator::new(10, 8),
         }
     }
 
 
 
-    pub fn update(&mut self, player: &Player, renderer: &Renderer, dt: instant::Duration)
+    pub fn update(&mut self, player: &Player, renderer: &Renderer, _dt: instant::Duration)
     {
         self.generator.generate_chunks(&player.position, 4);
 
@@ -60,8 +59,8 @@ impl VoxelWorld
 
     pub fn collide_line_segment(
         &self,
-        start: Point3<f32>,
-        direction: Vector3<f32>,
+        _start: Point3<f32>,
+        _direction: Vector3<f32>,
     ) -> Option<(&Chunk, &Block, Point3<f32>)>
     {
         todo!();
