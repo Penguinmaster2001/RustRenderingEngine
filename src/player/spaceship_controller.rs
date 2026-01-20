@@ -49,7 +49,7 @@ impl SpaceshipController
     {
         let dt = dt.as_secs_f32();
 
-        let translation = (self.forward.into_inner()
+        let acceleration = (self.forward.into_inner()
             * self.controller.get_forward()
             * self.input_settings.speed
             * dt)
@@ -59,7 +59,7 @@ impl SpaceshipController
                 * dt)
             + (self.up.into_inner() * self.controller.get_up() * self.input_settings.speed * dt);
 
-        self.physics_state.translate(translation);
+        self.physics_state.add_acceleration(acceleration);
 
         let right_rotation = UnitQuaternion::from_axis_angle(
             &self.up,
@@ -76,6 +76,8 @@ impl SpaceshipController
         );
         self.up = Unit::new_normalize(up_rotation.transform_vector(&self.up));
         self.right = Unit::new_normalize(right_rotation.transform_vector(&self.right));
+
+        self.physics_state.update(dt);
 
         camera.forward = self.forward.into_inner();
         camera.up = self.up.into_inner();

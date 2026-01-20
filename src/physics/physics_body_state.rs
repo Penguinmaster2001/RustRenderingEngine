@@ -1,25 +1,50 @@
 use nalgebra::{
     Point3,
     Quaternion,
-    RealField,
+    Scalar,
+    SimdRealField,
     Vector3,
 };
 
 
 
-pub struct PhysicsBodyState<S: RealField>
+pub struct PhysicsBodyState<S: Scalar>
 {
     position: Point3<S>,
     velocity: Vector3<S>,
     acceleration: Vector3<S>,
-    rotation: Quaternion<S>,
-    angular_velocity: Vector3<S>,
-    angular_acceleration: Vector3<S>,
+    _rotation: Quaternion<S>,
+    _angular_velocity: Vector3<S>,
+    _angular_acceleration: Vector3<S>,
 }
 
 
 
-impl<S: RealField> PhysicsBodyState<S>
+impl<S: Scalar> PhysicsBodyState<S>
+{
+    pub fn get_pos(&self) -> &Point3<S>
+    {
+        &self.position
+    }
+
+
+
+    pub fn get_vel(&self) -> &Vector3<S>
+    {
+        &self.velocity
+    }
+
+
+
+    pub fn get_acc(&self) -> &Vector3<S>
+    {
+        &self.acceleration
+    }
+}
+
+
+
+impl<S: SimdRealField> PhysicsBodyState<S>
 {
     pub fn new() -> Self
     {
@@ -27,15 +52,11 @@ impl<S: RealField> PhysicsBodyState<S>
             position: Point3::origin(),
             velocity: Vector3::zeros(),
             acceleration: Vector3::zeros(),
-            rotation: Quaternion::identity(),
-            angular_velocity: Vector3::zeros(),
-            angular_acceleration: Vector3::zeros(),
+            _rotation: Quaternion::identity(),
+            _angular_velocity: Vector3::zeros(),
+            _angular_acceleration: Vector3::zeros(),
         }
     }
-
-
-
-    pub fn update(&mut self, _dt: instant::Duration) {}
 
 
 
@@ -46,8 +67,22 @@ impl<S: RealField> PhysicsBodyState<S>
 
 
 
-    pub fn get_pos(&self) -> &Point3<S>
+    pub fn add_acceleration<A: Into<Vector3<S>>>(&mut self, acceleration: A)
     {
-        &self.position
+        self.acceleration += acceleration.into();
+    }
+}
+
+
+
+impl<S: SimdRealField + Copy> PhysicsBodyState<S>
+{
+    pub fn update<T: Into<S>>(&mut self, dt: T)
+    {
+        let dt = dt.into();
+        self.position += self.velocity.scale(dt) + self.acceleration.scale(dt * dt);
+        self.velocity += self.acceleration.scale(dt);
+
+        self.acceleration = Vector3::zeros();
     }
 }

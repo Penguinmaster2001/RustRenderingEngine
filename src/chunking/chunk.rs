@@ -46,6 +46,8 @@ impl Chunk
         let mut chunk = Self {
             world_offset: *world_offset,
             blocks,
+            mass: 0.0,
+            center_of_mass: Vector3::zeros(),
             empty: true,
         };
 

@@ -3,12 +3,8 @@ use crate::{
         InputHandler,
         input_settings::InputSettings,
     },
-    math,
     player::spaceship_controller::SpaceshipController,
-    rendering::camera::{
-        FreeCamera,
-        UprightCamera,
-    },
+    rendering::camera::FreeCamera,
     world_gen::voxel_world::VoxelWorld,
 };
 use nalgebra::{
@@ -50,7 +46,7 @@ impl Player
             ),
             controller: SpaceshipController::new(InputSettings {
                 sensitivity: 1.5,
-                speed: 25.0,
+                speed: 50.0,
             }),
         }
     }
