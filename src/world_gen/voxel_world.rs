@@ -43,7 +43,7 @@ impl VoxelWorld
 
     pub fn update(&mut self, player: &Player, renderer: &Renderer, _dt: instant::Duration)
     {
-        self.generator.generate_chunks(&player.position, 4);
+        self.generator.generate_chunks(player.get_position(), 4);
 
         let generated_chunks = self.generator.drain_results();
 
@@ -53,6 +53,29 @@ impl VoxelWorld
             self.chunk_renderer.add_chunk(&chunk, mesh);
             self.chunks.update_chunk(chunk);
         }
+    }
+
+
+
+    pub fn sample_force(&self, point: &Point3<f32>) -> Vector3<f32>
+    {
+        let mut force = Vector3::zeros();
+        for (pos, chunk) in &self.chunks.chunks
+        {
+            if chunk.empty
+            {
+                continue;
+            }
+            let to_center = (ChunkContainer::chunk_to_world(pos) + chunk.center_of_mass) - point;
+            let distance = to_center.magnitude();
+            if distance < 0.1
+            {
+                continue;
+            }
+            force += to_center * (chunk.mass / (distance * distance * distance));
+        }
+
+        force
     }
 
 

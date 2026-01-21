@@ -23,7 +23,7 @@ pub struct SpaceshipController
     forward: Unit<Vector3<f32>>,
     right: Unit<Vector3<f32>>,
     up: Unit<Vector3<f32>>,
-    physics_state: PhysicsBodyState<f32>,
+    pub physics_state: PhysicsBodyState<f32>,
     input_settings: InputSettings,
 }
 
@@ -45,19 +45,15 @@ impl SpaceshipController
 
 
 
-    pub fn update_camera(&mut self, camera: &mut FreeCamera, dt: Duration)
+    pub fn update(&mut self, dt: Duration)
     {
         let dt = dt.as_secs_f32();
 
         let acceleration = (self.forward.into_inner()
             * self.controller.get_forward()
-            * self.input_settings.speed
-            * dt)
-            + (self.right.into_inner()
-                * self.controller.get_left()
-                * self.input_settings.speed
-                * dt)
-            + (self.up.into_inner() * self.controller.get_up() * self.input_settings.speed * dt);
+            * self.input_settings.speed)
+            + (self.right.into_inner() * self.controller.get_left() * self.input_settings.speed)
+            + (self.up.into_inner() * self.controller.get_up() * self.input_settings.speed);
 
         self.physics_state.add_acceleration(acceleration);
 
@@ -78,12 +74,16 @@ impl SpaceshipController
         self.right = Unit::new_normalize(right_rotation.transform_vector(&self.right));
 
         self.physics_state.update(dt);
+        self.controller.reset_rotation();
+    }
 
+
+
+    pub fn update_camera(&self, camera: &mut FreeCamera)
+    {
         camera.forward = self.forward.into_inner();
         camera.up = self.up.into_inner();
         camera.position = self.physics_state.get_pos().clone();
-
-        self.controller.reset_rotation();
     }
 }
 

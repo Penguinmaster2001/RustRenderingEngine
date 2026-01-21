@@ -23,8 +23,6 @@ pub mod spaceship_controller;
 
 pub struct Player
 {
-    pub position: Point3<f32>,
-    pub velocity: Vector3<f32>,
     pub camera: FreeCamera,
     controller: SpaceshipController,
 }
@@ -37,8 +35,6 @@ impl Player
     {
         let position = position.into();
         Self {
-            position,
-            velocity: Vector3::zeros(),
             camera: FreeCamera::new(
                 position,
                 Vector3::x_axis().into_inner(),
@@ -53,16 +49,20 @@ impl Player
 
 
 
-    pub fn update(&mut self, dt: instant::Duration, _world: &VoxelWorld)
+    pub fn update(&mut self, dt: instant::Duration, world: &VoxelWorld)
     {
-        self.update_camera(dt);
+        let force = world.sample_force(self.get_position()) / 1.0;
+        println!("{}", force.magnitude());
+        self.controller.physics_state.add_acceleration(force);
+        self.controller.update(dt);
+        self.controller.update_camera(&mut self.camera);
     }
 
 
 
-    fn update_camera(&mut self, dt: instant::Duration)
+    pub(crate) fn get_position(&self) -> &Point3<f32>
     {
-        self.controller.update_camera(&mut self.camera, dt);
+        self.controller.physics_state.get_pos()
     }
 }
 
