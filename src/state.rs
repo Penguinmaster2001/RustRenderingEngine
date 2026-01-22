@@ -1,6 +1,5 @@
 use crate::{
     celestial_bodies::{
-        self,
         CelestialBodyContainer,
         planet::planet_meshing::CelestialMeshContainer,
     },
@@ -18,7 +17,6 @@ use crate::{
             SphereLight,
             SunLight,
         },
-        mesh_renderer::DrawMeshes,
         renderer::Renderer,
     },
     texture::{
@@ -29,19 +27,12 @@ use crate::{
         TextureVertex,
         Vertex,
     },
-    world_gen::voxel_world::VoxelWorld,
 };
 use nalgebra::{
     Point3,
     Vector4,
 };
-use rand::{
-    Rng,
-    rngs::{
-        StdRng,
-        ThreadRng,
-    },
-};
+use rand::rngs::ThreadRng;
 use std::sync::Arc;
 use wgpu::BindGroupLayout;
 use winit::{
@@ -71,7 +62,6 @@ pub struct State
     camera_buffer: wgpu::Buffer,
     pub camera_bind_group: wgpu::BindGroup,
     pub light_bind_group: wgpu::BindGroup,
-    voxel_world: VoxelWorld,
     celestial_bodies: CelestialBodyContainer,
     celestial_meshes: CelestialMeshContainer,
     renderer: Renderer,
@@ -223,11 +213,9 @@ impl State
                     cache: None,
                 });
 
-        let voxel_world = VoxelWorld::new();
-
         let mut rng = ThreadRng::default();
         let mut celestial_bodies = CelestialBodyContainer::new();
-        celestial_bodies.generate_planets(10, 100.0, 1000.0, &mut rng);
+        celestial_bodies.generate_planets(5, 1_000_000.0, 10_000.0, &mut rng);
 
         let mut celestial_meshes = CelestialMeshContainer::new();
         celestial_meshes.add_planets(&celestial_bodies.bodies, &renderer_state);
@@ -235,7 +223,6 @@ impl State
         let renderer = Renderer;
 
         Ok(Self {
-            voxel_world,
             celestial_bodies,
             celestial_meshes,
             renderer,
@@ -390,72 +377,6 @@ impl State
     {
         self.renderer
             .render(self, self.celestial_meshes.meshes.iter())
-
-        // self.renderer_state.window.request_redraw();
-
-        // // We can't render unless the surface is configured
-        // if !self.renderer_state.is_surface_configured
-        // {
-        //     return Ok(());
-        // }
-
-        // let output = self.renderer_state.surface.get_current_texture()?;
-
-        // let view = output
-        //     .texture
-        //     .create_view(&wgpu::TextureViewDescriptor::default());
-
-        // let mut encoder =
-        //     self.renderer_state
-        //         .device
-        //         .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-        //             label: Some("Render Encoder"),
-        //         });
-
-        // {
-        //     let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-        //         label: Some("Render Pass"),
-        //         color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-        //             view: &view,
-        //             resolve_target: None,
-        //             ops: wgpu::Operations {
-        //                 load: wgpu::LoadOp::Clear(wgpu::Color {
-        //                     r: 0.006,
-        //                     g: 0.006,
-        //                     b: 0.01,
-        //                     a: 1.0,
-        //                 }),
-        //                 store: wgpu::StoreOp::Store,
-        //             },
-        //             depth_slice: None,
-        //         })],
-        //         depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
-        //             view: &self.depth_texture.view,
-        //             depth_ops: Some(wgpu::Operations {
-        //                 load: wgpu::LoadOp::Clear(1.0),
-        //                 store: wgpu::StoreOp::Store,
-        //             }),
-        //             stencil_ops: None,
-        //         }),
-        //         occlusion_query_set: None,
-        //         timestamp_writes: None,
-        //     });
-
-        //     render_pass.set_pipeline(&self.render_pipeline);
-
-        //     render_pass.set_bind_group(0, &self.diffuse_bind_group, &[]);
-        //     render_pass.set_bind_group(1, &self.camera_bind_group, &[]);
-        //     render_pass.set_bind_group(2, &self.light_bind_group, &[]);
-
-        //     render_pass.draw_meshes(&self.voxel_world.chunk_renderer);
-        // }
-
-        // self.renderer_state
-        //     .queue
-        //     .submit(std::iter::once(encoder.finish()));
-        // output.present();
-
-        // Ok(())
     }
 
 
@@ -495,7 +416,7 @@ impl State
 
     pub fn update(&mut self, dt: instant::Duration)
     {
-        self.player.update(dt, &self.voxel_world);
+        self.player.update(dt, &self.celestial_bodies);
         self.camera_uniform
             .update_view_proj(&self.player.camera, &self.projection);
         self.renderer_state.queue.write_buffer(
@@ -503,8 +424,5 @@ impl State
             0,
             bytemuck::cast_slice(&[self.camera_uniform]),
         );
-
-        self.voxel_world
-            .update(&self.player, &self.renderer_state, dt);
     }
 }

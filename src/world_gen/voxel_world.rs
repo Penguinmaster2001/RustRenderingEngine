@@ -7,6 +7,7 @@ use crate::{
         },
         chunk_renderer::ChunkRenderer,
     },
+    physics::physics_environment::PhysicsEnvironment,
     player::Player,
     rendering::{
         RenderState,
@@ -59,29 +60,6 @@ impl VoxelWorld
 
 
 
-    pub fn sample_force(&self, point: &Point3<f32>) -> Vector3<f32>
-    {
-        let mut force = Vector3::zeros();
-        for (pos, chunk) in &self.chunks.chunks
-        {
-            if chunk.empty
-            {
-                continue;
-            }
-            let to_center = (ChunkContainer::chunk_to_world(pos) + chunk.center_of_mass) - point;
-            let distance = to_center.magnitude();
-            if distance < 0.1
-            {
-                continue;
-            }
-            force += to_center * (chunk.mass / (distance * distance * distance));
-        }
-
-        force
-    }
-
-
-
     pub fn collide_line_segment(
         &self,
         _start: Point3<f32>,
@@ -99,5 +77,32 @@ impl Default for VoxelWorld
     fn default() -> Self
     {
         Self::new()
+    }
+}
+
+
+
+impl PhysicsEnvironment for VoxelWorld
+{
+    fn sample_force<P: Into<Point3<f32>>>(&self, point: P) -> Vector3<f32>
+    {
+        let point = point.into();
+        let mut force = Vector3::zeros();
+        for (pos, chunk) in &self.chunks.chunks
+        {
+            if chunk.empty
+            {
+                continue;
+            }
+            let to_center = (ChunkContainer::chunk_to_world(pos) + chunk.center_of_mass) - point;
+            let distance = to_center.magnitude();
+            if distance < 0.1
+            {
+                continue;
+            }
+            force += to_center * (chunk.mass / (distance * distance * distance));
+        }
+
+        force
     }
 }

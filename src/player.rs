@@ -3,9 +3,9 @@ use crate::{
         InputHandler,
         input_settings::InputSettings,
     },
+    physics::physics_environment::PhysicsEnvironment,
     player::spaceship_controller::SpaceshipController,
     rendering::camera::FreeCamera,
-    world_gen::voxel_world::VoxelWorld,
 };
 use nalgebra::{
     Point3,
@@ -41,7 +41,7 @@ impl Player
                 Vector3::y_axis().into_inner(),
             ),
             controller: SpaceshipController::new(InputSettings {
-                sensitivity: 1.5,
+                sensitivity: 0.01,
                 speed: 50.0,
             }),
         }
@@ -49,9 +49,9 @@ impl Player
 
 
 
-    pub fn update(&mut self, dt: instant::Duration, world: &VoxelWorld)
+    pub fn update(&mut self, dt: instant::Duration, world: &impl PhysicsEnvironment)
     {
-        let force = world.sample_force(self.get_position()) / 2.0;
+        let force = world.sample_force(*self.get_position()) * 100.0;
         self.controller.physics_state.add_acceleration(force);
         self.controller.update(dt);
         self.controller.update_camera(&mut self.camera);

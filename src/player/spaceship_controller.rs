@@ -59,12 +59,12 @@ impl SpaceshipController
 
         let right_rotation = UnitQuaternion::from_axis_angle(
             &self.up,
-            -self.controller.get_rotate_right() * self.input_settings.sensitivity * dt,
+            -self.controller.get_rotate_right() * self.input_settings.sensitivity,
         );
 
         let up_rotation = UnitQuaternion::from_axis_angle(
             &self.right,
-            -self.controller.get_rotate_up() * self.input_settings.sensitivity * dt,
+            -self.controller.get_rotate_up() * self.input_settings.sensitivity,
         );
 
         self.forward = Unit::new_normalize(

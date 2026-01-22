@@ -1,6 +1,9 @@
 use crate::{
     celestial_bodies::planet::Planet,
-    physics::physics_body_state::PhysicsBodyState,
+    physics::{
+        physics_body_state::PhysicsBodyState,
+        physics_environment::PhysicsEnvironment,
+    },
 };
 use nalgebra::{
     Point3,
@@ -46,11 +49,25 @@ impl CelestialBodyContainer
             self.bodies.push(planet)
         }
     }
+}
 
 
 
-    pub fn sample_force(&self, point: &Point3<f32>) -> Vector3<f32>
+impl Default for CelestialBodyContainer
+{
+    fn default() -> Self
     {
+        Self::new()
+    }
+}
+
+
+
+impl PhysicsEnvironment for CelestialBodyContainer
+{
+    fn sample_force<P: Into<Point3<f32>>>(&self, point: P) -> Vector3<f32>
+    {
+        let point = point.into();
         let mut force = Vector3::zeros();
         for body in &self.bodies
         {
@@ -64,15 +81,5 @@ impl CelestialBodyContainer
         }
 
         force
-    }
-}
-
-
-
-impl Default for CelestialBodyContainer
-{
-    fn default() -> Self
-    {
-        Self::new()
     }
 }
