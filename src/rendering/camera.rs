@@ -1,4 +1,4 @@
-use crate::rendering::Renderer;
+use crate::rendering::RenderState;
 use nalgebra::{
     Matrix,
     Matrix4,
@@ -70,7 +70,7 @@ impl CameraUniform
 
 
 
-    pub fn create_camera_buffer(&self, renderer: &Renderer) -> wgpu::Buffer
+    pub fn create_camera_buffer(&self, renderer: &RenderState) -> wgpu::Buffer
     {
         renderer
             .device
@@ -85,7 +85,7 @@ impl CameraUniform
 
     pub fn create_camera_bind_group(
         camera_buffer: &Buffer,
-        renderer: &Renderer,
+        renderer: &RenderState,
     ) -> (wgpu::BindGroup, wgpu::BindGroupLayout)
     {
         let camera_bind_group_layout =

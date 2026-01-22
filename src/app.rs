@@ -21,15 +21,15 @@ use winit::{
 
 
 
-pub struct App
+pub struct App<'a>
 {
-    state: Option<State>,
+    state: Option<State<'a>>,
     last_time: Instant,
 }
 
 
 
-impl App
+impl<'a> App<'a>
 {
     pub fn new() -> Self
     {
@@ -42,7 +42,7 @@ impl App
 
 
 
-impl Default for App
+impl<'a> Default for App<'a>
 {
     fn default() -> Self
     {
@@ -52,7 +52,7 @@ impl Default for App
 
 
 
-impl ApplicationHandler<State> for App
+impl ApplicationHandler<State<'static>> for App<'static>
 {
     fn resumed(&mut self, event_loop: &ActiveEventLoop)
     {
@@ -85,7 +85,7 @@ impl ApplicationHandler<State> for App
 
 
     #[allow(unused_mut)]
-    fn user_event(&mut self, _event_loop: &ActiveEventLoop, mut event: State)
+    fn user_event(&mut self, _event_loop: &ActiveEventLoop, mut event: State<'static>)
     {
         self.state = Some(event);
     }
@@ -142,7 +142,7 @@ impl ApplicationHandler<State> for App
                     // Reconfigure the surface if it's lost or outdated
                     Err(wgpu::SurfaceError::Lost | wgpu::SurfaceError::Outdated) =>
                     {
-                        let size = state.renderer.window.inner_size();
+                        let size = state.renderer_state.window.inner_size();
                         state.resize(size.width, size.height);
                     }
 

@@ -48,8 +48,8 @@ impl Default for ChunkRenderer
 
 impl MeshRenderer for ChunkRenderer
 {
-    fn get_meshes(&self) -> impl Iterator<Item = &MeshBuffer>
+    fn get_meshes(&self) -> Vec<&MeshBuffer>
     {
-        self.chunk_meshes.values()
+        self.chunk_meshes.values().collect()
     }
 }

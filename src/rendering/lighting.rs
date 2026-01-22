@@ -1,4 +1,4 @@
-use crate::rendering::Renderer;
+use crate::rendering::RenderState;
 use bytemuck::Zeroable;
 use wgpu::{
     Buffer,
@@ -36,7 +36,7 @@ impl SphereLight
 
 
 
-    pub fn create_sphere_light_buffer(lights: &[SphereLight], renderer: &Renderer) -> Buffer
+    pub fn create_sphere_light_buffer(lights: &[SphereLight], renderer: &RenderState) -> Buffer
     {
         renderer
             .device
@@ -51,7 +51,7 @@ impl SphereLight
 
     pub fn create_sphere_light_bind_group(
         light_buffer: Buffer,
-        renderer: &Renderer,
+        renderer: &RenderState,
     ) -> (wgpu::BindGroup, wgpu::BindGroupLayout)
     {
         let binding = 0;
@@ -181,7 +181,7 @@ impl LightUniform
 
 
 
-    pub fn create_light_buffer(&self, renderer: &Renderer) -> Buffer
+    pub fn create_light_buffer(&self, renderer: &RenderState) -> Buffer
     {
         renderer
             .device
@@ -196,7 +196,7 @@ impl LightUniform
 
     pub fn create_light_bind_group(
         light_buffer: &Buffer,
-        renderer: &Renderer,
+        renderer: &RenderState,
     ) -> (wgpu::BindGroup, wgpu::BindGroupLayout)
     {
         let binding = 0;

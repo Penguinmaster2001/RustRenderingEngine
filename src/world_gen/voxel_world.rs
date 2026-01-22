@@ -9,7 +9,7 @@ use crate::{
     },
     player::Player,
     rendering::{
-        Renderer,
+        RenderState,
         mesh::MeshBuffer,
     },
     world_gen::world_generator::WorldGenerator,
@@ -43,7 +43,7 @@ impl VoxelWorld
 
 
 
-    pub fn update(&mut self, player: &Player, renderer: &Renderer, _dt: instant::Duration)
+    pub fn update(&mut self, player: &Player, renderer: &RenderState, _dt: instant::Duration)
     {
         self.generator.generate_chunks(player.get_position(), 4);
 

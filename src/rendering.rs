@@ -7,10 +7,11 @@ pub mod camera;
 pub mod lighting;
 pub mod mesh;
 pub mod mesh_renderer;
+pub mod renderer;
 
 
 
-pub struct Renderer
+pub struct RenderState
 {
     pub surface: wgpu::Surface<'static>,
     pub device: wgpu::Device,
@@ -22,7 +23,7 @@ pub struct Renderer
 
 
 
-impl Renderer
+impl RenderState
 {
     pub async fn new(window: Arc<Window>) -> anyhow::Result<Self>
     {

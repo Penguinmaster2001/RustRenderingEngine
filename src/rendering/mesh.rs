@@ -1,5 +1,5 @@
 use crate::{
-    rendering::Renderer,
+    rendering::RenderState,
     vertex::TextureVertex,
 };
 use wgpu::util::DeviceExt;
@@ -30,7 +30,7 @@ pub struct MeshBuffer
 
 impl MeshBuffer
 {
-    pub fn from_verts(vertices: &[TextureVertex], indices: &[u32], renderer: &Renderer) -> Self
+    pub fn from_verts(vertices: &[TextureVertex], indices: &[u32], renderer: &RenderState) -> Self
     {
         let vertex_buffer = renderer
             .device
@@ -57,7 +57,7 @@ impl MeshBuffer
 
 
 
-    pub fn from_data(chunk_mesh_data: &MeshData, renderer: &Renderer) -> Self
+    pub fn from_data(chunk_mesh_data: &MeshData, renderer: &RenderState) -> Self
     {
         MeshBuffer::from_verts(
             &chunk_mesh_data.vertices,

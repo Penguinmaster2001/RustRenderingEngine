@@ -3,7 +3,7 @@ use crate::{
     math,
     player::Player,
     rendering::{
-        Renderer,
+        RenderState,
         camera::{
             self,
             CameraUniform,
@@ -14,6 +14,7 @@ use crate::{
             SunLight,
         },
         mesh_renderer::DrawMeshes,
+        renderer::Renderer,
     },
     texture::{
         self,
@@ -46,43 +47,46 @@ use winit::{
 
 
 
-pub struct State
+pub struct State<'s>
 {
-    pub renderer: Renderer,
-    render_pipeline: wgpu::RenderPipeline,
-    diffuse_bind_group: wgpu::BindGroup,
-    depth_texture: Texture,
+    pub renderer_state: RenderState,
+    pub render_pipeline: wgpu::RenderPipeline,
+    pub diffuse_bind_group: wgpu::BindGroup,
+    pub depth_texture: Texture,
     projection: camera::Projection,
     pub player: Player,
     camera_uniform: camera::CameraUniform,
     camera_buffer: wgpu::Buffer,
-    camera_bind_group: wgpu::BindGroup,
-    light_bind_group: wgpu::BindGroup,
+    pub camera_bind_group: wgpu::BindGroup,
+    pub light_bind_group: wgpu::BindGroup,
     voxel_world: VoxelWorld,
+    renderer: Renderer<'s>,
     pub mouse_pressed: bool,
 }
 
 
 
-impl State
+impl<'s> State<'s>
 {
     pub async fn new(window: Arc<Window>) -> anyhow::Result<Self>
     {
-        let renderer = Renderer::new(window).await?;
-        renderer.window.set_cursor_grab(CursorGrabMode::Locked)?;
+        let renderer_state = RenderState::new(window).await?;
+        renderer_state
+            .window
+            .set_cursor_grab(CursorGrabMode::Locked)?;
 
-        let texture_bind_group_layout = State::create_texture_bind_group_layout(&renderer);
+        let texture_bind_group_layout = State::create_texture_bind_group_layout(&renderer_state);
 
         let diffuse_bind_group =
-            State::create_diffuse_bind_group(&renderer, &texture_bind_group_layout);
+            State::create_diffuse_bind_group(&renderer_state, &texture_bind_group_layout);
 
-        let shader = State::create_shader(&renderer);
+        let shader = State::create_shader(&renderer_state);
 
         let player = Player::new([0.0, 0.0, 0.0]);
 
         let projection = camera::Projection::new(
-            renderer.config.width,
-            renderer.config.height,
+            renderer_state.config.width,
+            renderer_state.config.height,
             110.0 * math::DEG_TO_RAD as f32,
             0.01,
             1000.0,
@@ -91,10 +95,10 @@ impl State
         let mut camera_uniform = camera::CameraUniform::new();
         camera_uniform.update_view_proj(&player.camera, &projection);
 
-        let camera_buffer = camera_uniform.create_camera_buffer(&renderer);
+        let camera_buffer = camera_uniform.create_camera_buffer(&renderer_state);
 
         let (camera_bind_group, camera_bind_group_layout) =
-            CameraUniform::create_camera_bind_group(&camera_buffer, &renderer);
+            CameraUniform::create_camera_bind_group(&camera_buffer, &renderer_state);
 
         let sphere_lights = &[
             SphereLight::new(
@@ -125,13 +129,13 @@ impl State
         ];
 
         let light_uniform = LightUniform::new(sphere_lights, sun_lights);
-        let light_buffer = light_uniform.create_light_buffer(&renderer);
+        let light_buffer = light_uniform.create_light_buffer(&renderer_state);
 
         let (light_bind_group, light_bind_group_layout) =
-            LightUniform::create_light_bind_group(&light_buffer, &renderer);
+            LightUniform::create_light_bind_group(&light_buffer, &renderer_state);
 
         let render_pipeline_layout =
-            renderer
+            renderer_state
                 .device
                 .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                     label: Some("Render Pipeline Layout"),
@@ -144,13 +148,13 @@ impl State
                 });
 
         let depth_texture = texture::Texture::create_depth_texture(
-            &renderer.device,
-            &renderer.config,
+            &renderer_state.device,
+            &renderer_state.config,
             "depth_texture",
         );
 
         let render_pipeline =
-            renderer
+            renderer_state
                 .device
                 .create_render_pipeline(&wgpu::RenderPipelineDescriptor {
                     label: Some("Render Pipeline"),
@@ -167,7 +171,7 @@ impl State
                         module: &shader,
                         entry_point: Some("fs_main"),
                         targets: &[Some(wgpu::ColorTargetState {
-                            format: renderer.config.format,
+                            format: renderer_state.config.format,
                             blend: Some(wgpu::BlendState::REPLACE),
                             write_mask: wgpu::ColorWrites::ALL,
                         })],
@@ -207,9 +211,14 @@ impl State
 
         let voxel_world = VoxelWorld::new();
 
+        let renderer = Renderer {
+            mesh_renderers: vec![],
+        };
+
         Ok(Self {
             voxel_world,
             renderer,
+            renderer_state,
             render_pipeline,
             diffuse_bind_group,
             depth_texture,
@@ -225,7 +234,7 @@ impl State
 
 
 
-    fn create_texture_bind_group_layout(renderer: &Renderer) -> BindGroupLayout
+    fn create_texture_bind_group_layout(renderer: &RenderState) -> BindGroupLayout
     {
         renderer
             .device
@@ -277,7 +286,7 @@ impl State
 
 
     fn create_diffuse_bind_group(
-        renderer: &Renderer,
+        renderer: &RenderState,
         texture_bind_group_layout: &BindGroupLayout,
     ) -> wgpu::BindGroup
     {
@@ -327,7 +336,7 @@ impl State
 
 
 
-    fn create_shader(renderer: &Renderer) -> wgpu::ShaderModule
+    fn create_shader(renderer: &RenderState) -> wgpu::ShaderModule
     {
         renderer
             .device
@@ -341,14 +350,14 @@ impl State
 
     pub fn resize(&mut self, width: u32, height: u32)
     {
-        self.renderer.resize(width, height);
+        self.renderer_state.resize(width, height);
         self.projection.resize(width, height);
 
         if width > 0 && height > 0
         {
             self.depth_texture = texture::Texture::create_depth_texture(
-                &self.renderer.device,
-                &self.renderer.config,
+                &self.renderer_state.device,
+                &self.renderer_state.config,
                 "depth_texture",
             );
         }
@@ -358,71 +367,73 @@ impl State
 
     pub fn render(&self) -> Result<(), wgpu::SurfaceError>
     {
-        self.renderer.window.request_redraw();
+        self.renderer.render(self)
 
-        // We can't render unless the surface is configured
-        if !self.renderer.is_surface_configured
-        {
-            return Ok(());
-        }
+        // self.renderer_state.window.request_redraw();
 
-        let output = self.renderer.surface.get_current_texture()?;
+        // // We can't render unless the surface is configured
+        // if !self.renderer_state.is_surface_configured
+        // {
+        //     return Ok(());
+        // }
 
-        let view = output
-            .texture
-            .create_view(&wgpu::TextureViewDescriptor::default());
+        // let output = self.renderer_state.surface.get_current_texture()?;
 
-        let mut encoder =
-            self.renderer
-                .device
-                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                    label: Some("Render Encoder"),
-                });
+        // let view = output
+        //     .texture
+        //     .create_view(&wgpu::TextureViewDescriptor::default());
 
-        {
-            let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                label: Some("Render Pass"),
-                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                    view: &view,
-                    resolve_target: None,
-                    ops: wgpu::Operations {
-                        load: wgpu::LoadOp::Clear(wgpu::Color {
-                            r: 0.006,
-                            g: 0.006,
-                            b: 0.01,
-                            a: 1.0,
-                        }),
-                        store: wgpu::StoreOp::Store,
-                    },
-                    depth_slice: None,
-                })],
-                depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
-                    view: &self.depth_texture.view,
-                    depth_ops: Some(wgpu::Operations {
-                        load: wgpu::LoadOp::Clear(1.0),
-                        store: wgpu::StoreOp::Store,
-                    }),
-                    stencil_ops: None,
-                }),
-                occlusion_query_set: None,
-                timestamp_writes: None,
-            });
+        // let mut encoder =
+        //     self.renderer_state
+        //         .device
+        //         .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+        //             label: Some("Render Encoder"),
+        //         });
 
-            render_pass.set_pipeline(&self.render_pipeline);
+        // {
+        //     let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+        //         label: Some("Render Pass"),
+        //         color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+        //             view: &view,
+        //             resolve_target: None,
+        //             ops: wgpu::Operations {
+        //                 load: wgpu::LoadOp::Clear(wgpu::Color {
+        //                     r: 0.006,
+        //                     g: 0.006,
+        //                     b: 0.01,
+        //                     a: 1.0,
+        //                 }),
+        //                 store: wgpu::StoreOp::Store,
+        //             },
+        //             depth_slice: None,
+        //         })],
+        //         depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
+        //             view: &self.depth_texture.view,
+        //             depth_ops: Some(wgpu::Operations {
+        //                 load: wgpu::LoadOp::Clear(1.0),
+        //                 store: wgpu::StoreOp::Store,
+        //             }),
+        //             stencil_ops: None,
+        //         }),
+        //         occlusion_query_set: None,
+        //         timestamp_writes: None,
+        //     });
 
-            render_pass.set_bind_group(0, &self.diffuse_bind_group, &[]);
-            render_pass.set_bind_group(1, &self.camera_bind_group, &[]);
-            render_pass.set_bind_group(2, &self.light_bind_group, &[]);
+        //     render_pass.set_pipeline(&self.render_pipeline);
 
-            render_pass.draw_meshes(&self.voxel_world.chunk_renderer);
-        }
+        //     render_pass.set_bind_group(0, &self.diffuse_bind_group, &[]);
+        //     render_pass.set_bind_group(1, &self.camera_bind_group, &[]);
+        //     render_pass.set_bind_group(2, &self.light_bind_group, &[]);
 
-        self.renderer
-            .queue
-            .submit(std::iter::once(encoder.finish()));
-        output.present();
+        //     render_pass.draw_meshes(&self.voxel_world.chunk_renderer);
+        // }
 
-        Ok(())
+        // self.renderer_state
+        //     .queue
+        //     .submit(std::iter::once(encoder.finish()));
+        // output.present();
+
+        // Ok(())
     }
 
 
@@ -465,12 +476,13 @@ impl State
         self.player.update(dt, &self.voxel_world);
         self.camera_uniform
             .update_view_proj(&self.player.camera, &self.projection);
-        self.renderer.queue.write_buffer(
+        self.renderer_state.queue.write_buffer(
             &self.camera_buffer,
             0,
             bytemuck::cast_slice(&[self.camera_uniform]),
         );
 
-        self.voxel_world.update(&self.player, &self.renderer, dt);
+        self.voxel_world
+            .update(&self.player, &self.renderer_state, dt);
     }
 }
