@@ -35,7 +35,17 @@ pub const UVS: [[f32; 2]; 4] = [
 
 impl TextureVertex
 {
-    pub fn from_vector(v: Vector3<f32>, i: usize, block: &BlockType) -> Self
+    pub fn new<P: Into<[f32; 3]>, U: Into<[f32; 2]>>(pos: P, uv: U) -> Self
+    {
+        Self {
+            position: pos.into(),
+            tex_coords: uv.into(),
+        }
+    }
+
+
+
+    pub fn from_vector_and_block(v: Vector3<f32>, i: usize, block: &BlockType) -> Self
     {
         Self {
             position: [v.x, v.y, v.z],

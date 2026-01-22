@@ -6,6 +6,10 @@ use wgpu::util::DeviceExt;
 
 
 
+pub mod primatives;
+
+
+
 pub struct MeshData
 {
     pub vertices: Vec<TextureVertex>,

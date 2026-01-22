@@ -170,7 +170,11 @@ impl MeshData
             .iter()
             .enumerate()
             .map(|(i, v)| {
-                TextureVertex::from_vector(position.into() + (BLOCK_SIZE * v), i, &block.block_type)
+                TextureVertex::from_vector_and_block(
+                    position.into() + (BLOCK_SIZE * v),
+                    i,
+                    &block.block_type,
+                )
             })
         {
             self.vertices.push(vertex);
