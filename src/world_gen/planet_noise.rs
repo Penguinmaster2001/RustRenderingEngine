@@ -43,6 +43,16 @@ impl PlanetNoise
 
 
 
+impl Default for PlanetNoise
+{
+    fn default() -> Self
+    {
+        Self::new()
+    }
+}
+
+
+
 impl NoiseSource for PlanetNoise
 {
     fn get<P: Into<(i64, i64, i64)>>(&self, point: P) -> BlockType

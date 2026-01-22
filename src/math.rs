@@ -1,5 +1,1 @@
-use std::ops::Mul;
-
-
-
 pub const DEG_TO_RAD: f64 = 3.141592653598 / 180.0;

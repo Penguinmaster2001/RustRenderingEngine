@@ -52,7 +52,7 @@ impl<S: SimdRealField> PhysicsBodyState<S>
             position: Point3::origin(),
             velocity: Vector3::zeros(),
             acceleration: Vector3::zeros(),
-            _rotation: Quaternion::identity(),
+            _rotation: Quaternion::default(),
             _angular_velocity: Vector3::zeros(),
             _angular_acceleration: Vector3::zeros(),
         }
@@ -70,6 +70,16 @@ impl<S: SimdRealField> PhysicsBodyState<S>
     pub fn add_acceleration<A: Into<Vector3<S>>>(&mut self, acceleration: A)
     {
         self.acceleration += acceleration.into();
+    }
+}
+
+
+
+impl<S: SimdRealField> Default for PhysicsBodyState<S>
+{
+    fn default() -> Self
+    {
+        Self::new()
     }
 }
 

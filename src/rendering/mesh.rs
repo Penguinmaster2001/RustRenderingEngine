@@ -26,17 +26,13 @@ pub struct MeshBuffer
 
 impl MeshBuffer
 {
-    pub fn from_verts(
-        vertices: &Vec<TextureVertex>,
-        indices: &Vec<u32>,
-        renderer: &Renderer,
-    ) -> Self
+    pub fn from_verts(vertices: &[TextureVertex], indices: &[u32], renderer: &Renderer) -> Self
     {
         let vertex_buffer = renderer
             .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: Some("chunk Vertex Buffer"),
-                contents: bytemuck::cast_slice(&vertices),
+                contents: bytemuck::cast_slice(vertices),
                 usage: wgpu::BufferUsages::VERTEX,
             });
 
@@ -44,7 +40,7 @@ impl MeshBuffer
             .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: Some("chunk Index Buffer"),
-                contents: bytemuck::cast_slice(&indices),
+                contents: bytemuck::cast_slice(indices),
                 usage: wgpu::BufferUsages::INDEX,
             });
 

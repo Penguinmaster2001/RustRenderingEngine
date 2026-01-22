@@ -42,6 +42,16 @@ impl App
 
 
 
+impl Default for App
+{
+    fn default() -> Self
+    {
+        Self::new()
+    }
+}
+
+
+
 impl ApplicationHandler<State> for App
 {
     fn resumed(&mut self, event_loop: &ActiveEventLoop)
@@ -95,13 +105,9 @@ impl ApplicationHandler<State> for App
             return;
         };
 
-        match event
+        if let DeviceEvent::MouseMotion { delta: (dx, dy) } = event
         {
-            DeviceEvent::MouseMotion { delta: (dx, dy) } =>
-            {
-                state.player.handle_mouse_movement(dx, dy);
-            }
-            _ => (),
+            state.player.handle_mouse_movement(dx, dy);
         }
     }
 

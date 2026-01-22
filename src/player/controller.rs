@@ -125,3 +125,13 @@ impl<S: RealField + Copy> Controller<S>
         self.steering.y
     }
 }
+
+
+
+impl<S: RealField + Copy> Default for Controller<S>
+{
+    fn default() -> Self
+    {
+        Self::new()
+    }
+}

@@ -40,3 +40,13 @@ impl HeightNoise
                     .get([x as f64 * self.scale, z as f64 * self.scale]))) as i64
     }
 }
+
+
+
+impl Default for HeightNoise
+{
+    fn default() -> Self
+    {
+        Self::new()
+    }
+}

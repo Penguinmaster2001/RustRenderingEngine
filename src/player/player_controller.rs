@@ -55,14 +55,9 @@ impl PlayerController
         camera.pitch += -self.controller.get_rotate_up() * self.input_settings.sensitivity * dt;
 
         // Keep the camera's angle from going too high/low.
-        if camera.pitch < -camera::SAFE_FRAC_PI_2
-        {
-            camera.pitch = -camera::SAFE_FRAC_PI_2;
-        }
-        else if camera.pitch > camera::SAFE_FRAC_PI_2
-        {
-            camera.pitch = camera::SAFE_FRAC_PI_2;
-        }
+        camera.pitch = camera
+            .pitch
+            .clamp(-camera::SAFE_FRAC_PI_2, camera::SAFE_FRAC_PI_2);
 
         self.controller.reset_rotation();
     }

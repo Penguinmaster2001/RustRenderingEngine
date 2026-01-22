@@ -302,7 +302,7 @@ impl State
         renderer
             .device
             .create_bind_group(&wgpu::BindGroupDescriptor {
-                layout: &texture_bind_group_layout,
+                layout: texture_bind_group_layout,
                 entries: &[
                     wgpu::BindGroupEntry {
                         binding: 0,
@@ -329,13 +329,12 @@ impl State
 
     fn create_shader(renderer: &Renderer) -> wgpu::ShaderModule
     {
-        let shader = renderer
+        renderer
             .device
             .create_shader_module(wgpu::ShaderModuleDescriptor {
                 label: Some("Shader"),
                 source: wgpu::ShaderSource::Wgsl(include_str!("shader.wgsl").into()),
-            });
-        shader
+            })
     }
 
 
@@ -447,6 +446,7 @@ impl State
         match button
         {
             MouseButton::Left => self.mouse_pressed = pressed,
+            MouseButton::Right => self.mouse_pressed = pressed,
             _ => (),
         }
     }

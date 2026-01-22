@@ -73,7 +73,7 @@ impl MeshData
         {
             // Generate faces on this block
             // Right face of block to left
-            if x <= 0
+            if x == 0
             {
                 // Check adjacent chunk
             }
@@ -84,7 +84,7 @@ impl MeshData
             }
 
             // Top face of block below
-            if y <= 0
+            if y == 0
             {
                 // Check adjacent chunk
             }
@@ -95,7 +95,7 @@ impl MeshData
             }
 
             // Front face of block behind
-            if z <= 0
+            if z == 0
             {
                 // Check adjacent chunk
             }
@@ -109,7 +109,7 @@ impl MeshData
         {
             // Generate faces on neighboring blocks
             // Right face of block to left
-            if x <= 0 || x >= CHUNK_BLOCK_SIZE
+            if x == 0 || x >= CHUNK_BLOCK_SIZE
             {
                 // Check adjacent chunk
             }
@@ -124,7 +124,7 @@ impl MeshData
             }
 
             // Top face of block below
-            if y <= 0 || y >= CHUNK_BLOCK_SIZE
+            if y == 0 || y >= CHUNK_BLOCK_SIZE
             {
                 // Check adjacent chunk
             }
@@ -139,7 +139,7 @@ impl MeshData
             }
 
             // Front face of block behind
-            if z <= 0 || z >= CHUNK_BLOCK_SIZE
+            if z == 0 || z >= CHUNK_BLOCK_SIZE
             {
                 // Check adjacent chunk
             }
@@ -183,12 +183,12 @@ impl MeshData
     {
         for _ in 0..num_faces
         {
-            self.indices.push(0 + self.vertex_count);
+            self.indices.push(self.vertex_count);
             self.indices.push(1 + self.vertex_count);
             self.indices.push(2 + self.vertex_count);
             self.indices.push(2 + self.vertex_count);
             self.indices.push(3 + self.vertex_count);
-            self.indices.push(0 + self.vertex_count);
+            self.indices.push(self.vertex_count);
 
             self.vertex_count += 4;
         }

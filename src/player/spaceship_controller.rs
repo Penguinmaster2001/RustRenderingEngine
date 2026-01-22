@@ -83,7 +83,7 @@ impl SpaceshipController
     {
         camera.forward = self.forward.into_inner();
         camera.up = self.up.into_inner();
-        camera.position = self.physics_state.get_pos().clone();
+        camera.position = *self.physics_state.get_pos();
     }
 }
 

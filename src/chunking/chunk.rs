@@ -76,8 +76,9 @@ impl Chunk
 
                 for y in 0..(height as u8)
                 {
-                    chunk.block_at_mut(x, y, z).and_then(|b| {
-                        b.block_type = if 0 == y % 2
+                    if let Some(block) = chunk.block_at_mut(x, y, z)
+                    {
+                        block.block_type = if 0 == y % 2
                         {
                             BlockType::Grass
                         }
@@ -85,9 +86,7 @@ impl Chunk
                         {
                             BlockType::Stone
                         };
-
-                        Some(b)
-                    });
+                    }
 
                     chunk.empty = false;
                 }
@@ -129,11 +128,11 @@ impl Chunk
                             + (chunk.world_offset.z as f32 * CHUNK_BLOCK_SIZE as f32 * BLOCK_SIZE)
                                 as i64,
                     ));
-                    chunk.block_at_mut(x, y, z).and_then(|b| {
-                        b.block_type = block_type;
 
-                        Some(b)
-                    });
+                    if let Some(block) = chunk.block_at_mut(x, y, z)
+                    {
+                        block.block_type = block_type;
+                    }
 
                     chunk.empty &= block_type == BlockType::Empty;
 
@@ -257,7 +256,7 @@ impl ChunkContainer
 
     pub fn get_chunk_at_world(&self, pos: &Point3<f32>) -> Option<&Chunk>
     {
-        let key = ChunkContainer::world_to_chunk(pos).into();
+        let key = ChunkContainer::world_to_chunk(pos);
 
         self.chunks.get(&key)
     }
@@ -285,5 +284,15 @@ impl ChunkContainer
     ) -> Option<&Block>
     {
         self.get_chunk(chunk).and_then(|c| c.block_at(block))
+    }
+}
+
+
+
+impl Default for ChunkContainer
+{
+    fn default() -> Self
+    {
+        Self::new()
     }
 }

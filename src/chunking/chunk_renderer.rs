@@ -36,10 +36,20 @@ impl ChunkRenderer
 
 
 
+impl Default for ChunkRenderer
+{
+    fn default() -> Self
+    {
+        Self::new()
+    }
+}
+
+
+
 impl MeshRenderer for ChunkRenderer
 {
     fn get_meshes(&self) -> impl Iterator<Item = &MeshBuffer>
     {
-        self.chunk_meshes.values().into_iter()
+        self.chunk_meshes.values()
     }
 }

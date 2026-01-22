@@ -29,7 +29,7 @@ impl SphereLight
             position: position.into(),
             _padding0: 0,
             color: color.into(),
-            intensity: intensity,
+            intensity,
             _padding1: [0, 0, 0],
         }
     }
@@ -112,7 +112,7 @@ impl SunLight
             direction: direction.into(),
             _padding0: 0,
             color: color.into(),
-            intensity: intensity,
+            intensity,
             _padding1: [0, 0, 0],
         }
     }
@@ -152,7 +152,7 @@ impl LightUniform
                 break;
             }
 
-            sphere_light_uniforms[sphere_light_count] = light.clone();
+            sphere_light_uniforms[sphere_light_count] = *light;
             sphere_light_count += 1;
         }
 
@@ -165,7 +165,7 @@ impl LightUniform
                 break;
             }
 
-            sun_light_uniforms[sun_light_count] = light.clone();
+            sun_light_uniforms[sun_light_count] = *light;
             sun_light_count += 1;
         }
 

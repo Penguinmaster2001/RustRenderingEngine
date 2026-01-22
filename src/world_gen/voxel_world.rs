@@ -91,3 +91,13 @@ impl VoxelWorld
         todo!();
     }
 }
+
+
+
+impl Default for VoxelWorld
+{
+    fn default() -> Self
+    {
+        Self::new()
+    }
+}

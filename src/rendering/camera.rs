@@ -122,6 +122,16 @@ impl CameraUniform
 
 
 
+impl Default for CameraUniform
+{
+    fn default() -> Self
+    {
+        Self::new()
+    }
+}
+
+
+
 #[derive(Debug)]
 pub struct UprightCamera
 {
@@ -166,7 +176,7 @@ impl Camera for UprightCamera
 
         Matrix::look_at_rh(
             &self.position,
-            &(&self.position + vector!(cos_pitch * cos_yaw, sin_pitch, cos_pitch * sin_yaw)),
+            &(self.position + vector!(cos_pitch * cos_yaw, sin_pitch, cos_pitch * sin_yaw)),
             &Vector3::y_axis().into_inner(),
         )
     }
@@ -235,9 +245,9 @@ impl Projection
     {
         Self {
             aspect: width as f32 / height as f32,
-            fovy: fovy,
-            znear: znear,
-            zfar: zfar,
+            fovy,
+            znear,
+            zfar,
         }
     }
 
