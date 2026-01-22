@@ -69,8 +69,8 @@ impl MeshData
         MeshData::new_uv_sphere(
             5.0 * planet.mass.powf(1.0 / 3.0),
             *planet.physics_state.get_pos(),
-            12,
-            12,
+            16,
+            32,
         )
     }
 }

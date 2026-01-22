@@ -54,6 +54,7 @@ pub struct State
 {
     pub renderer_state: RenderState,
     pub render_pipeline: wgpu::RenderPipeline,
+    pub line_render_pipeline: wgpu::RenderPipeline,
     pub diffuse_bind_group: wgpu::BindGroup,
     pub depth_texture: Texture,
     projection: camera::Projection,
@@ -84,7 +85,7 @@ impl State
         let diffuse_bind_group =
             State::create_diffuse_bind_group(&renderer_state, &texture_bind_group_layout);
 
-        let shader = State::create_shader(&renderer_state);
+        let (shader, line_shader) = State::create_shaders(&renderer_state);
 
         let player = Player::new([0.0, 0.0, 0.0]);
 
@@ -213,6 +214,14 @@ impl State
                     cache: None,
                 });
 
+        let line_render_pipeline = Renderer::create_line_pipeline(
+            &renderer_state,
+            &texture_bind_group_layout,
+            &camera_bind_group_layout,
+            &light_bind_group_layout,
+            &line_shader,
+        );
+
         let mut rng = ThreadRng::default();
         let mut celestial_bodies = CelestialBodyContainer::new();
         celestial_bodies.generate_planets(5, 1_000_000.0, 10_000.0, &mut rng);
@@ -228,6 +237,7 @@ impl State
             renderer,
             renderer_state,
             render_pipeline,
+            line_render_pipeline,
             diffuse_bind_group,
             depth_texture,
             projection,
@@ -344,14 +354,22 @@ impl State
 
 
 
-    fn create_shader(renderer: &RenderState) -> wgpu::ShaderModule
+    fn create_shaders(renderer: &RenderState) -> (wgpu::ShaderModule, wgpu::ShaderModule)
     {
-        renderer
-            .device
-            .create_shader_module(wgpu::ShaderModuleDescriptor {
-                label: Some("Shader"),
-                source: wgpu::ShaderSource::Wgsl(include_str!("shader.wgsl").into()),
-            })
+        (
+            renderer
+                .device
+                .create_shader_module(wgpu::ShaderModuleDescriptor {
+                    label: Some("Shader"),
+                    source: wgpu::ShaderSource::Wgsl(include_str!("shader.wgsl").into()),
+                }),
+            renderer
+                .device
+                .create_shader_module(wgpu::ShaderModuleDescriptor {
+                    label: Some("Line Shader"),
+                    source: wgpu::ShaderSource::Wgsl(include_str!("line_shader.wgsl").into()),
+                }),
+        )
     }
 
 

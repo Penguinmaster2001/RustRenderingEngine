@@ -1,10 +1,17 @@
 use crate::{
     rendering::{
+        RenderState,
         mesh::MeshBuffer,
         mesh_renderer::DrawMeshes,
     },
     state::State,
+    texture,
+    vertex::{
+        TextureVertex,
+        Vertex,
+    },
 };
+use wgpu;
 
 
 
@@ -71,13 +78,19 @@ impl Renderer
                 timestamp_writes: None,
             });
 
+            let meshes: Vec<&MeshBuffer> = meshes.collect();
+
             render_pass.set_pipeline(&state.render_pipeline);
 
             render_pass.set_bind_group(0, &state.diffuse_bind_group, &[]);
             render_pass.set_bind_group(1, &state.camera_bind_group, &[]);
             render_pass.set_bind_group(2, &state.light_bind_group, &[]);
 
-            render_pass.draw_meshes(meshes);
+            render_pass.draw_meshes(meshes.iter().copied());
+
+            render_pass.set_pipeline(&state.line_render_pipeline);
+
+            render_pass.draw_meshes(meshes.iter().copied());
         }
 
         state
@@ -87,5 +100,84 @@ impl Renderer
         output.present();
 
         Ok(())
+    }
+
+
+
+    pub fn create_line_pipeline(
+        renderer_state: &RenderState,
+        texture_bind_group_layout: &wgpu::BindGroupLayout,
+        camera_bind_group_layout: &wgpu::BindGroupLayout,
+        light_bind_group_layout: &wgpu::BindGroupLayout,
+        shader: &wgpu::ShaderModule,
+    ) -> wgpu::RenderPipeline
+    {
+        let render_pipeline_layout =
+            renderer_state
+                .device
+                .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+                    label: Some("Line Render Pipeline Layout"),
+                    bind_group_layouts: &[
+                        texture_bind_group_layout,
+                        camera_bind_group_layout,
+                        light_bind_group_layout,
+                    ],
+                    push_constant_ranges: &[],
+                });
+
+        renderer_state
+            .device
+            .create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+                label: Some("Line Render Pipeline"),
+                layout: Some(&render_pipeline_layout),
+
+                vertex: wgpu::VertexState {
+                    module: shader,
+                    entry_point: Some("vs_main"),
+                    buffers: &[TextureVertex::desc()],
+                    compilation_options: wgpu::PipelineCompilationOptions::default(),
+                },
+
+                fragment: Some(wgpu::FragmentState {
+                    module: shader,
+                    entry_point: Some("fs_main"),
+                    targets: &[Some(wgpu::ColorTargetState {
+                        format: renderer_state.config.format,
+                        blend: Some(wgpu::BlendState::REPLACE),
+                        write_mask: wgpu::ColorWrites::ALL,
+                    })],
+                    compilation_options: wgpu::PipelineCompilationOptions::default(),
+                }),
+
+                primitive: wgpu::PrimitiveState {
+                    topology: wgpu::PrimitiveTopology::LineStrip,
+                    strip_index_format: None,
+                    front_face: wgpu::FrontFace::Ccw,
+                    cull_mode: Some(wgpu::Face::Back),
+                    // Setting this to anything other than Fill requires Features::NON_FILL_POLYGON_MODE
+                    polygon_mode: wgpu::PolygonMode::Fill,
+                    // Requires Features::DEPTH_CLIP_CONTROL
+                    unclipped_depth: false,
+                    // Requires Features::CONSERVATIVE_RASTERIZATION
+                    conservative: false,
+                },
+
+                depth_stencil: Some(wgpu::DepthStencilState {
+                    format: texture::Texture::DEPTH_FORMAT,
+                    depth_write_enabled: true,
+                    depth_compare: wgpu::CompareFunction::Less,
+                    stencil: wgpu::StencilState::default(),
+                    bias: wgpu::DepthBiasState::default(),
+                }),
+
+                multisample: wgpu::MultisampleState {
+                    count: 1,
+                    mask: !0,
+                    alpha_to_coverage_enabled: false,
+                },
+
+                multiview: None,
+                cache: None,
+            })
     }
 }
