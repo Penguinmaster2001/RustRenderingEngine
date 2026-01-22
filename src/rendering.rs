@@ -5,6 +5,8 @@ use winit::window::Window;
 
 pub mod camera;
 pub mod lighting;
+pub mod mesh;
+pub mod mesh_renderer;
 
 
 

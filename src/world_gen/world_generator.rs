@@ -1,9 +1,9 @@
-use crate::chunking::{
-    chunk::{
+use crate::{
+    chunking::chunk::{
         Chunk,
         ChunkContainer,
     },
-    chunk_mesh::ChunkMeshData,
+    rendering::mesh::MeshData,
 };
 use nalgebra::{
     Point3,
@@ -33,7 +33,7 @@ pub struct WorldGenerator
 {
     pub load_radius: i64,
     job_tx: mpsc::Sender<ChunkJob>,
-    result_rx: mpsc::Receiver<(Chunk, ChunkMeshData)>,
+    result_rx: mpsc::Receiver<(Chunk, MeshData)>,
     _worker_handles: Vec<thread::JoinHandle<()>>,
     generated_chunks: HashSet<Point3<i64>>,
 }
@@ -45,7 +45,7 @@ impl WorldGenerator
     pub fn new(load_radius: i64, num_workers: usize) -> Self
     {
         let (job_tx, job_rx) = mpsc::channel::<ChunkJob>();
-        let (result_tx, result_rx) = mpsc::channel::<(Chunk, ChunkMeshData)>();
+        let (result_tx, result_rx) = mpsc::channel::<(Chunk, MeshData)>();
 
         let job_rx = Arc::new(Mutex::new(job_rx));
         let result_tx = Arc::new(result_tx);
@@ -78,7 +78,7 @@ impl WorldGenerator
 
                     // let chunk = Chunk::from_offset(&job.pos);
                     let chunk = Chunk::generate_planets(&job.pos);
-                    let mesh_data = ChunkMeshData::from_chunk(&chunk);
+                    let mesh_data = MeshData::from_chunk(&chunk);
 
                     let _ = result_tx.send((chunk, mesh_data));
                 }
@@ -143,7 +143,7 @@ impl WorldGenerator
 
 
 
-    pub fn drain_results(&mut self) -> Vec<(Chunk, ChunkMeshData)>
+    pub fn drain_results(&mut self) -> Vec<(Chunk, MeshData)>
     {
         let mut out = Vec::new();
 

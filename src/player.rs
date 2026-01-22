@@ -51,8 +51,7 @@ impl Player
 
     pub fn update(&mut self, dt: instant::Duration, world: &VoxelWorld)
     {
-        let force = world.sample_force(self.get_position()) / 1.0;
-        println!("{}", force.magnitude());
+        let force = world.sample_force(self.get_position()) / 2.0;
         self.controller.physics_state.add_acceleration(force);
         self.controller.update(dt);
         self.controller.update_camera(&mut self.camera);

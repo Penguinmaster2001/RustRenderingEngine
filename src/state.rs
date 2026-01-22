@@ -1,5 +1,4 @@
 use crate::{
-    chunking::chunk_renderer::DrawChunks,
     input::InputHandler,
     math,
     player::Player,
@@ -14,6 +13,7 @@ use crate::{
             SphereLight,
             SunLight,
         },
+        mesh_renderer::DrawMeshes,
     },
     texture::{
         self,
@@ -415,7 +415,7 @@ impl State
             render_pass.set_bind_group(1, &self.camera_bind_group, &[]);
             render_pass.set_bind_group(2, &self.light_bind_group, &[]);
 
-            render_pass.draw_chunks(&self.voxel_world.chunk_renderer);
+            render_pass.draw_meshes(&self.voxel_world.chunk_renderer);
         }
 
         self.renderer

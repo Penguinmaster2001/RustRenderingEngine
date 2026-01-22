@@ -5,11 +5,13 @@ use crate::{
             Chunk,
             ChunkContainer,
         },
-        chunk_mesh::ChunkMesh,
         chunk_renderer::ChunkRenderer,
     },
     player::Player,
-    rendering::Renderer,
+    rendering::{
+        Renderer,
+        mesh::MeshBuffer,
+    },
     world_gen::world_generator::WorldGenerator,
 };
 use nalgebra::{
@@ -49,7 +51,7 @@ impl VoxelWorld
 
         for (chunk, mesh_data) in generated_chunks
         {
-            let mesh = ChunkMesh::from_data(&mesh_data, renderer);
+            let mesh = MeshBuffer::from_data(&mesh_data, renderer);
             self.chunk_renderer.add_chunk(&chunk, mesh);
             self.chunks.update_chunk(chunk);
         }

@@ -1,5 +1,10 @@
-use crate::chunking::chunk::Chunk;
-use crate::chunking::chunk_mesh::ChunkMesh;
+use crate::{
+    chunking::chunk::Chunk,
+    rendering::{
+        mesh::MeshBuffer,
+        mesh_renderer::MeshRenderer,
+    },
+};
 use nalgebra::Point3;
 use std::collections::HashMap;
 
@@ -7,7 +12,7 @@ use std::collections::HashMap;
 
 pub struct ChunkRenderer
 {
-    chunk_meshes: HashMap<Point3<i64>, ChunkMesh>,
+    chunk_meshes: HashMap<Point3<i64>, MeshBuffer>,
 }
 
 
@@ -23,7 +28,7 @@ impl ChunkRenderer
 
 
 
-    pub fn add_chunk(&mut self, chunk: &Chunk, mesh: ChunkMesh)
+    pub fn add_chunk(&mut self, chunk: &Chunk, mesh: MeshBuffer)
     {
         self.chunk_meshes.insert(chunk.world_offset, mesh);
     }
@@ -31,27 +36,10 @@ impl ChunkRenderer
 
 
 
-pub trait DrawChunks<'a>
+impl MeshRenderer for ChunkRenderer
 {
-    fn draw_chunks(&mut self, chunk_renderer: &ChunkRenderer);
-}
-
-
-
-impl<'a, 'b> DrawChunks<'b> for wgpu::RenderPass<'a>
-where
-    'b: 'a,
-{
-    fn draw_chunks(&mut self, chunk_renderer: &ChunkRenderer)
+    fn get_meshes(&self) -> impl Iterator<Item = &MeshBuffer>
     {
-        for chunk_mesh in chunk_renderer
-            .chunk_meshes
-            .values()
-            .filter(|c| c.index_count > 0)
-        {
-            self.set_vertex_buffer(0, chunk_mesh.vertex_buffer.slice(..));
-            self.set_index_buffer(chunk_mesh.index_buffer.slice(..), wgpu::IndexFormat::Uint32);
-            self.draw_indexed(0..chunk_mesh.index_count, 0, 0..1);
-        }
+        self.chunk_meshes.values().into_iter()
     }
 }
