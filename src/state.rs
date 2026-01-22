@@ -1,4 +1,9 @@
 use crate::{
+    celestial_bodies::{
+        self,
+        CelestialBodyContainer,
+        planet::planet_meshing::CelestialMeshContainer,
+    },
     input::InputHandler,
     math,
     player::Player,
@@ -30,6 +35,13 @@ use nalgebra::{
     Point3,
     Vector4,
 };
+use rand::{
+    Rng,
+    rngs::{
+        StdRng,
+        ThreadRng,
+    },
+};
 use std::sync::Arc;
 use wgpu::BindGroupLayout;
 use winit::{
@@ -47,7 +59,7 @@ use winit::{
 
 
 
-pub struct State<'s>
+pub struct State
 {
     pub renderer_state: RenderState,
     pub render_pipeline: wgpu::RenderPipeline,
@@ -60,13 +72,15 @@ pub struct State<'s>
     pub camera_bind_group: wgpu::BindGroup,
     pub light_bind_group: wgpu::BindGroup,
     voxel_world: VoxelWorld,
-    renderer: Renderer<'s>,
+    celestial_bodies: CelestialBodyContainer,
+    celestial_meshes: CelestialMeshContainer,
+    renderer: Renderer,
     pub mouse_pressed: bool,
 }
 
 
 
-impl<'s> State<'s>
+impl State
 {
     pub async fn new(window: Arc<Window>) -> anyhow::Result<Self>
     {
@@ -211,12 +225,19 @@ impl<'s> State<'s>
 
         let voxel_world = VoxelWorld::new();
 
-        let renderer = Renderer {
-            mesh_renderers: vec![],
-        };
+        let mut rng = ThreadRng::default();
+        let mut celestial_bodies = CelestialBodyContainer::new();
+        celestial_bodies.generate_planets(10, 100.0, 1000.0, &mut rng);
+
+        let mut celestial_meshes = CelestialMeshContainer::new();
+        celestial_meshes.add_planets(&celestial_bodies.bodies, &renderer_state);
+
+        let renderer = Renderer;
 
         Ok(Self {
             voxel_world,
+            celestial_bodies,
+            celestial_meshes,
             renderer,
             renderer_state,
             render_pipeline,
@@ -367,7 +388,8 @@ impl<'s> State<'s>
 
     pub fn render(&self) -> Result<(), wgpu::SurfaceError>
     {
-        self.renderer.render(self)
+        self.renderer
+            .render(self, self.celestial_meshes.meshes.iter())
 
         // self.renderer_state.window.request_redraw();
 

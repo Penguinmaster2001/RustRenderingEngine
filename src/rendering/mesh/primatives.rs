@@ -50,12 +50,12 @@ impl MeshData
 
                 if lat > 0 && long > 0
                 {
-                    indices.push((prev_row + long - 1) as u32);
                     indices.push((prev_row + long) as u32);
+                    indices.push((prev_row + long - 1) as u32);
                     indices.push((this_row + long - 1) as u32);
 
-                    indices.push((prev_row + long) as u32);
                     indices.push((this_row + long) as u32);
+                    indices.push((prev_row + long) as u32);
                     indices.push((this_row + long - 1) as u32);
                 }
             }

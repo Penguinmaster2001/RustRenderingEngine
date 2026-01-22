@@ -16,7 +16,7 @@ pub mod planet;
 
 pub struct CelestialBodyContainer
 {
-    bodies: Vec<Planet>,
+    pub bodies: Vec<Planet>,
 }
 
 

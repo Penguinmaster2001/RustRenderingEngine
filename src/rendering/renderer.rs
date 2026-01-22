@@ -1,23 +1,24 @@
 use crate::{
-    rendering::mesh_renderer::{
-        DrawMeshes,
-        MeshRenderer,
+    rendering::{
+        mesh::MeshBuffer,
+        mesh_renderer::DrawMeshes,
     },
     state::State,
 };
 
 
 
-pub struct Renderer<'r>
+pub struct Renderer;
+
+
+
+impl Renderer
 {
-    pub mesh_renderers: Vec<&'r dyn MeshRenderer>,
-}
-
-
-
-impl<'r> Renderer<'r>
-{
-    pub fn render(&self, state: &State) -> Result<(), wgpu::SurfaceError>
+    pub fn render<'m, I: Iterator<Item = &'m MeshBuffer>>(
+        &self,
+        state: &State,
+        meshes: I,
+    ) -> Result<(), wgpu::SurfaceError>
     {
         state.renderer_state.window.request_redraw();
 
@@ -76,10 +77,7 @@ impl<'r> Renderer<'r>
             render_pass.set_bind_group(1, &state.camera_bind_group, &[]);
             render_pass.set_bind_group(2, &state.light_bind_group, &[]);
 
-            for mesh_renderer in &self.mesh_renderers
-            {
-                render_pass.draw_meshes(*mesh_renderer);
-            }
+            render_pass.draw_meshes(meshes);
         }
 
         state

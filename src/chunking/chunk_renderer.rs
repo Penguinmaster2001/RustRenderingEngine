@@ -1,9 +1,6 @@
 use crate::{
     chunking::chunk::Chunk,
-    rendering::{
-        mesh::MeshBuffer,
-        mesh_renderer::MeshRenderer,
-    },
+    rendering::mesh::MeshBuffer,
 };
 use nalgebra::Point3;
 use std::collections::HashMap;
@@ -46,9 +43,9 @@ impl Default for ChunkRenderer
 
 
 
-impl MeshRenderer for ChunkRenderer
+impl ChunkRenderer
 {
-    fn get_meshes(&self) -> Vec<&MeshBuffer>
+    pub fn get_meshes(&self) -> Vec<&MeshBuffer>
     {
         self.chunk_meshes.values().collect()
     }

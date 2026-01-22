@@ -21,15 +21,15 @@ use winit::{
 
 
 
-pub struct App<'a>
+pub struct App
 {
-    state: Option<State<'a>>,
+    state: Option<State>,
     last_time: Instant,
 }
 
 
 
-impl<'a> App<'a>
+impl App
 {
     pub fn new() -> Self
     {
@@ -42,7 +42,7 @@ impl<'a> App<'a>
 
 
 
-impl<'a> Default for App<'a>
+impl Default for App
 {
     fn default() -> Self
     {
@@ -52,7 +52,7 @@ impl<'a> Default for App<'a>
 
 
 
-impl ApplicationHandler<State<'static>> for App<'static>
+impl ApplicationHandler<State> for App
 {
     fn resumed(&mut self, event_loop: &ActiveEventLoop)
     {
@@ -85,7 +85,7 @@ impl ApplicationHandler<State<'static>> for App<'static>
 
 
     #[allow(unused_mut)]
-    fn user_event(&mut self, _event_loop: &ActiveEventLoop, mut event: State<'static>)
+    fn user_event(&mut self, _event_loop: &ActiveEventLoop, mut event: State)
     {
         self.state = Some(event);
     }
