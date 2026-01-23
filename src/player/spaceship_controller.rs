@@ -3,7 +3,7 @@ use crate::{
         InputHandler,
         input_settings::InputSettings,
     },
-    physics::physics_body_state::PhysicsBodyState,
+    physics::physics_body::physics_body_state::PhysicsBodyState,
     player::controller::Controller,
     rendering::camera::FreeCamera,
 };

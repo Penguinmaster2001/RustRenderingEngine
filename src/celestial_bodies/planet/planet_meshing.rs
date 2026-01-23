@@ -67,7 +67,7 @@ impl MeshData
     pub fn from_planet(planet: &Planet) -> Self
     {
         MeshData::new_uv_sphere(
-            5.0 * planet.mass.powf(1.0 / 3.0),
+            10.0 * planet.mass.powf(1.0 / 3.0),
             *planet.physics_state.get_pos(),
             16,
             32,

@@ -1,4 +1,4 @@
-use crate::physics::physics_body_state::PhysicsBodyState;
+use crate::physics::physics_body::physics_body_state::PhysicsBodyState;
 
 
 

@@ -24,7 +24,7 @@ pub mod spaceship_controller;
 pub struct Player
 {
     pub camera: FreeCamera,
-    controller: SpaceshipController,
+    pub controller: SpaceshipController,
 }
 
 
@@ -42,7 +42,7 @@ impl Player
             ),
             controller: SpaceshipController::new(InputSettings {
                 sensitivity: 0.01,
-                speed: 50.0,
+                speed: 10.0,
             }),
         }
     }

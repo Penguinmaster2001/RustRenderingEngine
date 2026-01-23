@@ -1,7 +1,7 @@
 use crate::{
     celestial_bodies::planet::Planet,
     physics::{
-        physics_body_state::PhysicsBodyState,
+        physics_body::physics_body_state::PhysicsBodyState,
         physics_environment::PhysicsEnvironment,
     },
 };
@@ -38,7 +38,7 @@ impl CelestialBodyContainer
         for _ in 0..num
         {
             let mut planet = Planet {
-                mass: rng.random_range(0.8 * ave_mass..1.2 * ave_mass),
+                mass: rng.random_range(0.5 * ave_mass..2.0 * ave_mass),
                 physics_state: PhysicsBodyState::new(),
             };
             planet.physics_state.translate([

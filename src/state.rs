@@ -5,6 +5,13 @@ use crate::{
     },
     input::InputHandler,
     math,
+    physics::{
+        physics_body::{
+            PhysicsBody,
+            physics_body_properties::PhysicsBodyProperties,
+        },
+        trajectory::calculate_trajectory,
+    },
     player::Player,
     rendering::{
         RenderState,
@@ -17,6 +24,7 @@ use crate::{
             SphereLight,
             SunLight,
         },
+        mesh::MeshBuffer,
         renderer::Renderer,
     },
     texture::{
@@ -33,7 +41,10 @@ use nalgebra::{
     Vector4,
 };
 use rand::rngs::ThreadRng;
-use std::sync::Arc;
+use std::{
+    sync::Arc,
+    time::Duration,
+};
 use wgpu::BindGroupLayout;
 use winit::{
     event::{
@@ -224,7 +235,7 @@ impl State
 
         let mut rng = ThreadRng::default();
         let mut celestial_bodies = CelestialBodyContainer::new();
-        celestial_bodies.generate_planets(5, 1_000_000.0, 10_000.0, &mut rng);
+        celestial_bodies.generate_planets(20, 1_000_000.0, 20_000.0, &mut rng);
 
         let mut celestial_meshes = CelestialMeshContainer::new();
         celestial_meshes.add_planets(&celestial_bodies.bodies, &renderer_state);
@@ -391,10 +402,31 @@ impl State
 
 
 
-    pub fn render(&self) -> Result<(), wgpu::SurfaceError>
+    pub fn render(&mut self) -> Result<(), wgpu::SurfaceError>
     {
-        self.renderer
-            .render(self, self.celestial_meshes.meshes.iter())
+        let body = PhysicsBody {
+            properties: PhysicsBodyProperties { mass: 0.01 },
+            state: self.player.controller.physics_state,
+        };
+
+        let trajectory =
+            calculate_trajectory(1.0 / 100.0, 100 * 60 * 10, &body, &self.celestial_bodies);
+
+        let vertices = trajectory
+            .iter()
+            .map(|p| TextureVertex::new(*p, [0.0, 0.0]))
+            .collect::<Vec<TextureVertex>>();
+
+        self.renderer.render(
+            self,
+            self.celestial_meshes.meshes.iter(),
+            [MeshBuffer::from_verts(
+                &vertices,
+                &(0..vertices.len() as u32).collect::<Vec<u32>>(),
+                &self.renderer_state,
+            )]
+            .iter(),
+        )
     }
 
 

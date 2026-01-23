@@ -25,6 +25,7 @@ impl Renderer
         &self,
         state: &State,
         meshes: I,
+        lines: I,
     ) -> Result<(), wgpu::SurfaceError>
     {
         state.renderer_state.window.request_redraw();
@@ -78,19 +79,17 @@ impl Renderer
                 timestamp_writes: None,
             });
 
-            let meshes: Vec<&MeshBuffer> = meshes.collect();
-
             render_pass.set_pipeline(&state.render_pipeline);
 
             render_pass.set_bind_group(0, &state.diffuse_bind_group, &[]);
             render_pass.set_bind_group(1, &state.camera_bind_group, &[]);
             render_pass.set_bind_group(2, &state.light_bind_group, &[]);
 
-            render_pass.draw_meshes(meshes.iter().copied());
+            render_pass.draw_meshes(meshes);
 
             render_pass.set_pipeline(&state.line_render_pipeline);
 
-            render_pass.draw_meshes(meshes.iter().copied());
+            render_pass.draw_meshes(lines);
         }
 
         state

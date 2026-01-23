@@ -8,6 +8,7 @@ use nalgebra::{
 
 
 
+#[derive(Clone, Copy)]
 pub struct PhysicsBodyState<S: Scalar>
 {
     position: Point3<S>,
