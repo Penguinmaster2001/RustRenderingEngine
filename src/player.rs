@@ -9,7 +9,7 @@ use crate::{
             physics_body_properties::PhysicsBodyProperties,
             physics_body_state::PhysicsBodyState,
         },
-        physics_environment::PhysicsEnvironment,
+        physics_environment::ForceField,
     },
     player::spaceship_controller::SpaceshipController,
     rendering::camera::FreeCamera,
@@ -61,7 +61,7 @@ impl Player
 
 
 
-    pub fn update(&mut self, dt: instant::Duration, world: &impl PhysicsEnvironment)
+    pub fn update(&mut self, dt: instant::Duration, world: &impl ForceField)
     {
         let force = world.sample_force(*self.get_position()) * 100.0;
         self.body.state.add_acceleration(force);

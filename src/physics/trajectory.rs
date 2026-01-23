@@ -1,12 +1,12 @@
 use crate::physics::{
     physics_body::PhysicsBody,
-    physics_environment::PhysicsEnvironment,
+    physics_environment::ForceField,
 };
 use nalgebra::Point3;
 
 
 
-pub fn calculate_trajectory<W: PhysicsEnvironment>(
+pub fn calculate_trajectory<W: ForceField>(
     dt: f32,
     num: usize,
     body: &PhysicsBody,

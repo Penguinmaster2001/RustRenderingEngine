@@ -2,7 +2,7 @@ use crate::{
     celestial_bodies::planet::Planet,
     physics::{
         physics_body::physics_body_state::PhysicsBodyState,
-        physics_environment::PhysicsEnvironment,
+        physics_environment::ForceField,
     },
 };
 use nalgebra::{
@@ -63,7 +63,7 @@ impl Default for CelestialBodyContainer
 
 
 
-impl PhysicsEnvironment for CelestialBodyContainer
+impl ForceField for CelestialBodyContainer
 {
     fn sample_force<P: Into<Point3<f32>>>(&self, point: P) -> Vector3<f32>
     {
