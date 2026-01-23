@@ -3,7 +3,11 @@ use crate::{
         InputHandler,
         input_settings::InputSettings,
     },
-    physics::physics_body::physics_body_state::PhysicsBodyState,
+    physics::physics_body::{
+        PhysicsBody,
+        physics_body_properties::PhysicsBodyProperties,
+        physics_body_state::PhysicsBodyState,
+    },
     player::controller::Controller,
     rendering::camera::FreeCamera,
 };
@@ -23,7 +27,7 @@ pub struct SpaceshipController
     forward: Unit<Vector3<f32>>,
     right: Unit<Vector3<f32>>,
     up: Unit<Vector3<f32>>,
-    pub physics_state: PhysicsBodyState<f32>,
+    pub body: PhysicsBody,
     input_settings: InputSettings,
 }
 
@@ -38,7 +42,7 @@ impl SpaceshipController
             forward: Vector3::x_axis(),
             right: Vector3::z_axis(),
             up: Vector3::y_axis(),
-            physics_state: PhysicsBodyState::new(),
+            body: PhysicsBody::new(PhysicsBodyProperties::new(0.01), PhysicsBodyState::new()),
             input_settings,
         }
     }
@@ -55,7 +59,7 @@ impl SpaceshipController
             + (self.right.into_inner() * self.controller.get_left() * self.input_settings.speed)
             + (self.up.into_inner() * self.controller.get_up() * self.input_settings.speed);
 
-        self.physics_state.add_acceleration(acceleration);
+        self.body.state.add_acceleration(acceleration);
 
         let right_rotation = UnitQuaternion::from_axis_angle(
             &self.up,
@@ -73,7 +77,7 @@ impl SpaceshipController
         self.up = Unit::new_normalize(up_rotation.transform_vector(&self.up));
         self.right = Unit::new_normalize(right_rotation.transform_vector(&self.right));
 
-        self.physics_state.update(dt);
+        self.body.state.update(dt);
         self.controller.reset_rotation();
     }
 
@@ -83,7 +87,7 @@ impl SpaceshipController
     {
         camera.forward = self.forward.into_inner();
         camera.up = self.up.into_inner();
-        camera.position = *self.physics_state.get_pos();
+        camera.position = *self.body.state.get_pos();
     }
 }
 

@@ -5,13 +5,7 @@ use crate::{
     },
     input::InputHandler,
     math,
-    physics::{
-        physics_body::{
-            PhysicsBody,
-            physics_body_properties::PhysicsBodyProperties,
-        },
-        trajectory::calculate_trajectory,
-    },
+    physics::trajectory::calculate_trajectory,
     player::Player,
     rendering::{
         RenderState,
@@ -41,10 +35,7 @@ use nalgebra::{
     Vector4,
 };
 use rand::rngs::ThreadRng;
-use std::{
-    sync::Arc,
-    time::Duration,
-};
+use std::sync::Arc;
 use wgpu::BindGroupLayout;
 use winit::{
     event::{
@@ -404,10 +395,7 @@ impl State
 
     pub fn render(&mut self) -> Result<(), wgpu::SurfaceError>
     {
-        let body = PhysicsBody {
-            properties: PhysicsBodyProperties { mass: 0.01 },
-            state: self.player.controller.physics_state,
-        };
+        let body = self.player.controller.body;
 
         let trajectory =
             calculate_trajectory(1.0 / 100.0, 100 * 60 * 10, &body, &self.celestial_bodies);

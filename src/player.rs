@@ -3,7 +3,14 @@ use crate::{
         InputHandler,
         input_settings::InputSettings,
     },
-    physics::physics_environment::PhysicsEnvironment,
+    physics::{
+        physics_body::{
+            PhysicsBody,
+            physics_body_properties::PhysicsBodyProperties,
+            physics_body_state::PhysicsBodyState,
+        },
+        physics_environment::PhysicsEnvironment,
+    },
     player::spaceship_controller::SpaceshipController,
     rendering::camera::FreeCamera,
 };
@@ -25,6 +32,7 @@ pub struct Player
 {
     pub camera: FreeCamera,
     pub controller: SpaceshipController,
+    pub body: PhysicsBody,
 }
 
 
@@ -44,6 +52,10 @@ impl Player
                 sensitivity: 0.01,
                 speed: 10.0,
             }),
+            body: PhysicsBody {
+                properties: PhysicsBodyProperties { mass: 0.01 },
+                state: PhysicsBodyState::new(),
+            },
         }
     }
 
@@ -52,7 +64,7 @@ impl Player
     pub fn update(&mut self, dt: instant::Duration, world: &impl PhysicsEnvironment)
     {
         let force = world.sample_force(*self.get_position()) * 100.0;
-        self.controller.physics_state.add_acceleration(force);
+        self.body.state.add_acceleration(force);
         self.controller.update(dt);
         self.controller.update_camera(&mut self.camera);
     }
@@ -61,7 +73,7 @@ impl Player
 
     pub(crate) fn get_position(&self) -> &Point3<f32>
     {
-        self.controller.physics_state.get_pos()
+        self.body.state.get_pos()
     }
 }
 
