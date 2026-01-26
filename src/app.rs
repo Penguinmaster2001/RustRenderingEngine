@@ -1,21 +1,19 @@
 use crate::{
-    input::InputHandler,
+    input::InputEvent,
     state::State,
 };
 use std::{
     sync::Arc,
     time::Instant,
 };
+use winit::event::WindowEvent;
 use winit::{
     application::ApplicationHandler,
     event::{
         DeviceEvent,
         DeviceId,
-        KeyEvent,
-        WindowEvent,
     },
     event_loop::ActiveEventLoop,
-    keyboard::PhysicalKey,
     window::Window,
 };
 
@@ -94,7 +92,7 @@ impl ApplicationHandler<State> for App
 
     fn device_event(
         &mut self,
-        _event_loop: &ActiveEventLoop,
+        event_loop: &ActiveEventLoop,
         _device_id: DeviceId,
         event: DeviceEvent,
     )
@@ -105,9 +103,9 @@ impl ApplicationHandler<State> for App
             return;
         };
 
-        if let DeviceEvent::MouseMotion { delta: (dx, dy) } = event
+        if let Ok(event) = InputEvent::try_from(event)
         {
-            state.player.handle_mouse_movement(dx, dy);
+            state.handle_input(event_loop, event);
         }
     }
 
@@ -132,9 +130,8 @@ impl ApplicationHandler<State> for App
             WindowEvent::Resized(size) => state.resize(size.width, size.height),
             WindowEvent::RedrawRequested =>
             {
-                let dt = self.last_time.elapsed();
-                self.last_time = Instant::now();
-                state.update(dt);
+                let now = Instant::now();
+                self.last_time = now;
                 match state.render()
                 {
                     Ok(_) => (),
@@ -153,28 +150,13 @@ impl ApplicationHandler<State> for App
                 }
             }
 
-            WindowEvent::MouseInput {
-                state: btn_state,
-                button,
-                ..
-            } => state.handle_mouse_button(button, btn_state.is_pressed()),
-
-            WindowEvent::MouseWheel { delta, .. } =>
+            event =>
             {
-                state.handle_mouse_scroll(&delta);
+                if let Ok(event) = InputEvent::try_from(event)
+                {
+                    state.handle_input(event_loop, event);
+                }
             }
-
-            WindowEvent::KeyboardInput {
-                event:
-                    KeyEvent {
-                        physical_key: PhysicalKey::Code(code),
-                        state: key_state,
-                        ..
-                    },
-                ..
-            } => state.handle_key(event_loop, code, key_state.is_pressed()),
-
-            _ => (),
         }
     }
 }

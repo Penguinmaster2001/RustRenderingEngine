@@ -14,6 +14,7 @@ use crate::{
 use nalgebra::{
     Unit,
     UnitQuaternion,
+    Vector2,
     Vector3,
 };
 use std::time::Duration;
@@ -95,10 +96,10 @@ impl SpaceshipController
 
 impl InputHandler for SpaceshipController
 {
-    fn handle_mouse_movement(&mut self, mouse_dx: f64, mouse_dy: f64) -> bool
+    fn handle_mouse_movement(&mut self, delta: Vector2<f32>) -> bool
     {
-        self.controller.rotate_right(mouse_dx as f32);
-        self.controller.rotate_up(mouse_dy as f32);
+        self.controller.rotate_right(delta.x);
+        self.controller.rotate_up(delta.y);
         true
     }
 

@@ -3,9 +3,12 @@ use crate::{
         CelestialBodyContainer,
         planet::planet_meshing::CelestialMeshContainer,
     },
-    input::InputHandler,
+    input::InputEvent,
     math,
-    physics::trajectory::calculate_trajectory,
+    physics::{
+        physics_sim::PhysicsSim,
+        trajectory::calculate_trajectory,
+    },
     player::Player,
     rendering::{
         RenderState,
@@ -35,13 +38,12 @@ use nalgebra::{
     Vector4,
 };
 use rand::rngs::ThreadRng;
-use std::sync::Arc;
+use std::{
+    sync::Arc,
+    time::Duration,
+};
 use wgpu::BindGroupLayout;
 use winit::{
-    event::{
-        MouseButton,
-        MouseScrollDelta,
-    },
     event_loop::ActiveEventLoop,
     keyboard::KeyCode,
     window::{
@@ -60,15 +62,14 @@ pub struct State
     pub diffuse_bind_group: wgpu::BindGroup,
     pub depth_texture: Texture,
     projection: camera::Projection,
-    pub player: Player,
     camera_uniform: camera::CameraUniform,
     camera_buffer: wgpu::Buffer,
     pub camera_bind_group: wgpu::BindGroup,
     pub light_bind_group: wgpu::BindGroup,
-    celestial_bodies: CelestialBodyContainer,
     celestial_meshes: CelestialMeshContainer,
+    physics_sim: PhysicsSim,
     renderer: Renderer,
-    pub mouse_pressed: bool,
+    celestial_bodies: CelestialBodyContainer,
 }
 
 
@@ -226,16 +227,23 @@ impl State
 
         let mut rng = ThreadRng::default();
         let mut celestial_bodies = CelestialBodyContainer::new();
-        celestial_bodies.generate_planets(20, 1_000_000.0, 20_000.0, &mut rng);
+        celestial_bodies.generate_planets(20, 1_000_000.0, 1_000.0, &mut rng);
 
         let mut celestial_meshes = CelestialMeshContainer::new();
         celestial_meshes.add_planets(&celestial_bodies.bodies, &renderer_state);
 
         let renderer = Renderer;
 
+        let physics_sim = PhysicsSim::new(
+            Duration::from_secs_f32(1.0 / 1000.0),
+            player,
+            celestial_bodies.clone(),
+        );
+
         Ok(Self {
             celestial_bodies,
             celestial_meshes,
+            physics_sim,
             renderer,
             renderer_state,
             render_pipeline,
@@ -243,12 +251,10 @@ impl State
             diffuse_bind_group,
             depth_texture,
             projection,
-            player,
             camera_uniform,
             camera_buffer,
             camera_bind_group,
             light_bind_group,
-            mouse_pressed: false,
         })
     }
 
@@ -395,15 +401,31 @@ impl State
 
     pub fn render(&mut self) -> Result<(), wgpu::SurfaceError>
     {
-        let body = self.player.controller.body;
+        let mut vertices = vec![];
 
-        let trajectory =
-            calculate_trajectory(1.0 / 100.0, 100 * 60 * 10, &body, &self.celestial_bodies);
+        if let Some(player) = self.physics_sim.get_player()
+        {
+            self.camera_uniform
+                .update_view_proj(&player.camera, &self.projection);
 
-        let vertices = trajectory
-            .iter()
-            .map(|p| TextureVertex::new(*p, [0.0, 0.0]))
-            .collect::<Vec<TextureVertex>>();
+            let body = player.controller.body;
+            let trajectory = calculate_trajectory(
+                self.physics_sim.dt.as_secs_f32(),
+                100 * 60 * 10,
+                &body,
+                &self.celestial_bodies,
+            );
+
+            vertices = trajectory
+                .iter()
+                .map(|p| TextureVertex::new(*p, [0.0, 0.0]))
+                .collect::<Vec<TextureVertex>>();
+        }
+        self.renderer_state.queue.write_buffer(
+            &self.camera_buffer,
+            0,
+            bytemuck::cast_slice(&[self.camera_uniform]),
+        );
 
         self.renderer.render(
             self,
@@ -419,48 +441,18 @@ impl State
 
 
 
-    pub fn handle_key(&mut self, event_loop: &ActiveEventLoop, key: KeyCode, is_pressed: bool)
+    pub fn handle_input(&mut self, event_loop: &ActiveEventLoop, event: InputEvent)
     {
-        if (key, is_pressed) == (KeyCode::Escape, true)
+        if let InputEvent::Keyboard {
+            code: KeyCode::Escape,
+            pressed: true,
+        } = event
         {
             event_loop.exit();
         }
         else
         {
-            self.player.handle_key(key, is_pressed);
+            self.physics_sim.handle_input(event);
         }
-    }
-
-
-
-    pub fn handle_mouse_button(&mut self, button: MouseButton, pressed: bool)
-    {
-        match button
-        {
-            MouseButton::Left => self.mouse_pressed = pressed,
-            MouseButton::Right => self.mouse_pressed = pressed,
-            _ => (),
-        }
-    }
-
-
-
-    pub fn handle_mouse_scroll(&mut self, delta: &MouseScrollDelta)
-    {
-        self.player.handle_mouse_scroll(delta);
-    }
-
-
-
-    pub fn update(&mut self, dt: instant::Duration)
-    {
-        self.player.update(dt, &self.celestial_bodies);
-        self.camera_uniform
-            .update_view_proj(&self.player.camera, &self.projection);
-        self.renderer_state.queue.write_buffer(
-            &self.camera_buffer,
-            0,
-            bytemuck::cast_slice(&[self.camera_uniform]),
-        );
     }
 }

@@ -1,24 +1,130 @@
+use crate::{
+    input::{
+        InputEvent,
+        InputHandler,
+    },
+    physics::physics_environment::ForceField,
+    player::Player,
+};
+use std::{
+    sync::{
+        Arc,
+        RwLock,
+        RwLockReadGuard,
+        mpsc,
+    },
+    thread,
+    time::Instant,
+};
+
+
+
 pub struct PhysicsSim
 {
-    bodies: Vec<Arc<PhysicsBody>>,
+    pub dt: instant::Duration,
+    input_tx: mpsc::Sender<InputEvent>,
+    _handle: thread::JoinHandle<()>,
+    player: Arc<RwLock<Player>>,
 }
 
 
 
 impl PhysicsSim
 {
-    pub fn new() -> Self
+    pub fn new<F: 'static + ForceField + Send>(
+        dt: instant::Duration,
+        player: Player,
+        world: F,
+    ) -> Self
     {
-        todo!();
+        let player = Arc::new(RwLock::new(player));
+        let (input_tx, input_rx) = mpsc::channel();
+        let mut physics_thread = PhysicsThread::new(dt, player.clone(), world, input_rx);
+        Self {
+            dt,
+            input_tx,
+            _handle: thread::spawn(move || {
+                physics_thread.run();
+            }),
+            player,
+        }
     }
 
 
 
-    pub fn run()
+    pub fn handle_input(&self, event: InputEvent)
+    {
+        self.input_tx
+            .send(event)
+            .expect("Should be able to send input event.");
+    }
+
+
+
+    pub fn get_player(&'_ self) -> Option<RwLockReadGuard<'_, Player>>
+    {
+        self.player.read().ok()
+    }
+}
+
+
+
+pub struct PhysicsThread<F: ForceField>
+{
+    dt: instant::Duration,
+    last_time: Instant,
+    player: Arc<RwLock<Player>>,
+    world: F,
+    input_rx: mpsc::Receiver<InputEvent>,
+}
+
+
+
+impl<F: ForceField> PhysicsThread<F>
+{
+    pub fn new(
+        dt: instant::Duration,
+        player: Arc<RwLock<Player>>,
+        world: F,
+        input_rx: mpsc::Receiver<InputEvent>,
+    ) -> Self
+    {
+        Self {
+            dt,
+            last_time: Instant::now(),
+            player,
+            world,
+            input_rx,
+        }
+    }
+
+
+
+    pub fn run(&mut self)
     {
         loop
         {
-            todo!();
+            let now = Instant::now();
+            let dt = now - self.last_time;
+            if dt < self.dt
+            {
+                continue;
+            }
+            self.last_time = now;
+            if let Ok(mut player) = self.player.write()
+            {
+                for event in self.input_rx.try_iter()
+                {
+                    match event
+                    {
+                        InputEvent::MouseMotion { delta } => player.handle_mouse_movement(delta),
+                        InputEvent::Keyboard { code, pressed } => player.handle_key(code, pressed),
+                        _ => false,
+                    };
+                }
+                player.update(self.dt, &self.world);
+                // println!("Update, {:?}, {:?}", dt, self.dt);
+            }
         }
     }
 }

@@ -3,19 +3,13 @@ use crate::{
         InputHandler,
         input_settings::InputSettings,
     },
-    physics::{
-        physics_body::{
-            PhysicsBody,
-            physics_body_properties::PhysicsBodyProperties,
-            physics_body_state::PhysicsBodyState,
-        },
-        physics_environment::ForceField,
-    },
+    physics::physics_environment::ForceField,
     player::spaceship_controller::SpaceshipController,
     rendering::camera::FreeCamera,
 };
 use nalgebra::{
     Point3,
+    Vector2,
     Vector3,
 };
 use winit::keyboard::KeyCode;
@@ -32,7 +26,6 @@ pub struct Player
 {
     pub camera: FreeCamera,
     pub controller: SpaceshipController,
-    pub body: PhysicsBody,
 }
 
 
@@ -52,10 +45,6 @@ impl Player
                 sensitivity: 0.01,
                 speed: 10.0,
             }),
-            body: PhysicsBody {
-                properties: PhysicsBodyProperties { mass: 0.01 },
-                state: PhysicsBodyState::new(),
-            },
         }
     }
 
@@ -63,8 +52,9 @@ impl Player
 
     pub fn update(&mut self, dt: instant::Duration, world: &impl ForceField)
     {
-        let force = world.sample_force(*self.get_position()) * 100.0;
-        self.body.state.add_acceleration(force);
+        let force = world.sample_force(*self.get_position()) / self.controller.body.properties.mass;
+
+        self.controller.body.state.add_acceleration(force);
         self.controller.update(dt);
         self.controller.update_camera(&mut self.camera);
     }
@@ -73,7 +63,7 @@ impl Player
 
     pub(crate) fn get_position(&self) -> &Point3<f32>
     {
-        self.body.state.get_pos()
+        self.controller.body.state.get_pos()
     }
 }
 
@@ -81,9 +71,9 @@ impl Player
 
 impl InputHandler for Player
 {
-    fn handle_mouse_movement(&mut self, mouse_dx: f64, mouse_dy: f64) -> bool
+    fn handle_mouse_movement(&mut self, delta: Vector2<f32>) -> bool
     {
-        self.controller.handle_mouse_movement(mouse_dx, mouse_dy)
+        self.controller.handle_mouse_movement(delta)
     }
 
 

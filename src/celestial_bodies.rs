@@ -17,6 +17,7 @@ pub mod planet;
 
 
 
+#[derive(Clone)]
 pub struct CelestialBodyContainer
 {
     pub bodies: Vec<Planet>,
@@ -37,8 +38,10 @@ impl CelestialBodyContainer
     {
         for _ in 0..num
         {
+            let mass = rng.random_range(0.5 * ave_mass..2.0 * ave_mass);
             let mut planet = Planet {
-                mass: rng.random_range(0.5 * ave_mass..2.0 * ave_mass),
+                radius: 0.5 * mass.powf(1.0 / 3.0),
+                mass,
                 physics_state: PhysicsBodyState::new(),
             };
             planet.physics_state.translate([
@@ -73,7 +76,7 @@ impl ForceField for CelestialBodyContainer
         {
             let to_center = body.physics_state.get_pos() - point;
             let distance = to_center.magnitude();
-            if distance < 0.1
+            if distance < body.radius
             {
                 continue;
             }
