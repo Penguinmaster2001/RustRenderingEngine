@@ -16,6 +16,10 @@ use wgpu::{
 
 
 
+pub mod camera_controller;
+
+
+
 pub const OPENGL_TO_WGPU_MATRIX: Matrix4<f32> = matrix![
     1.0, 0.0, 0.0, 0.0;
     0.0, 1.0, 0.0, 0.0;
@@ -178,6 +182,57 @@ impl Camera for UprightCamera
             &self.position,
             &(self.position + vector!(cos_pitch * cos_yaw, sin_pitch, cos_pitch * sin_yaw)),
             &Vector3::y_axis().into_inner(),
+        )
+    }
+}
+
+
+
+pub struct OrbitCamera
+{
+    pub target: Point3<f32>,
+    pub distance: f32,
+    pub forward: Vector3<f32>,
+    pub up: Vector3<f32>,
+}
+
+
+
+impl OrbitCamera
+{
+    pub fn new<V: Into<Point3<f32>>, F: Into<Vector3<f32>>, U: Into<Vector3<f32>>>(
+        position: V,
+        distance: f32,
+        forward: F,
+        up: U,
+    ) -> Self
+    {
+        Self {
+            target: position.into(),
+            distance,
+            forward: forward.into(),
+            up: up.into(),
+        }
+    }
+}
+
+
+
+impl Camera for OrbitCamera
+{
+    fn get_position(&self) -> &Point3<f32>
+    {
+        &self.target
+    }
+
+
+
+    fn calc_matrix(&self) -> Matrix4<f32>
+    {
+        Matrix::look_at_rh(
+            &(self.target - self.forward * self.distance),
+            &self.target,
+            &self.up,
         )
     }
 }

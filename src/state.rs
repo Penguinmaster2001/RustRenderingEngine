@@ -3,18 +3,22 @@ use crate::{
         CelestialBodyContainer,
         planet::planet_meshing::CelestialMeshContainer,
     },
-    input::InputEvent,
+    input::{
+        InputEvent,
+        input_settings::InputSettings,
+    },
     math,
     physics::{
         physics_sim::PhysicsSim,
         trajectory::calculate_trajectory,
     },
-    player::Player,
+    player::spaceship_controller::SpaceshipController,
     rendering::{
         RenderState,
         camera::{
             self,
             CameraUniform,
+            FreeCamera,
         },
         lighting::{
             LightUniform,
@@ -35,6 +39,7 @@ use crate::{
 };
 use nalgebra::{
     Point3,
+    Vector3,
     Vector4,
 };
 use rand::rngs::ThreadRng;
@@ -68,6 +73,7 @@ pub struct State
     pub light_bind_group: wgpu::BindGroup,
     celestial_meshes: CelestialMeshContainer,
     physics_sim: PhysicsSim,
+    camera: FreeCamera,
     renderer: Renderer,
     celestial_bodies: CelestialBodyContainer,
 }
@@ -90,7 +96,16 @@ impl State
 
         let (shader, line_shader) = State::create_shaders(&renderer_state);
 
-        let player = Player::new([0.0, 0.0, 0.0]);
+        let space_ship = SpaceshipController::new(InputSettings {
+            sensitivity: 0.01,
+            speed: 200.0,
+        });
+
+        let camera = FreeCamera::new(
+            Vector3::zeros(),
+            Vector3::x_axis().into_inner(),
+            Vector3::y_axis().into_inner(),
+        );
 
         let projection = camera::Projection::new(
             renderer_state.config.width,
@@ -101,7 +116,7 @@ impl State
         );
 
         let mut camera_uniform = camera::CameraUniform::new();
-        camera_uniform.update_view_proj(&player.camera, &projection);
+        camera_uniform.update_view_proj(&camera, &projection);
 
         let camera_buffer = camera_uniform.create_camera_buffer(&renderer_state);
 
@@ -227,7 +242,7 @@ impl State
 
         let mut rng = ThreadRng::default();
         let mut celestial_bodies = CelestialBodyContainer::new();
-        celestial_bodies.generate_planets(20, 1_000_000.0, 1_000.0, &mut rng);
+        celestial_bodies.generate_planets(5, 1_000_000.0, 5_000.0, &mut rng);
 
         let mut celestial_meshes = CelestialMeshContainer::new();
         celestial_meshes.add_planets(&celestial_bodies.bodies, &renderer_state);
@@ -236,11 +251,12 @@ impl State
 
         let physics_sim = PhysicsSim::new(
             Duration::from_secs_f32(1.0 / 1000.0),
-            player,
+            space_ship,
             celestial_bodies.clone(),
         );
 
         Ok(Self {
+            camera,
             celestial_bodies,
             celestial_meshes,
             physics_sim,
@@ -405,10 +421,11 @@ impl State
 
         if let Some(player) = self.physics_sim.get_player()
         {
+            player.update_camera(&mut self.camera);
             self.camera_uniform
-                .update_view_proj(&player.camera, &self.projection);
+                .update_view_proj(&self.camera, &self.projection);
 
-            let body = player.controller.body;
+            let body = player.body;
             let trajectory = calculate_trajectory(
                 self.physics_sim.dt.as_secs_f32(),
                 100 * 60 * 10,

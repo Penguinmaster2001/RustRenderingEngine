@@ -4,7 +4,10 @@ use crate::{
         InputHandler,
     },
     physics::physics_environment::ForceField,
-    player::Player,
+    player::{
+        Player,
+        spaceship_controller::SpaceshipController,
+    },
 };
 use std::{
     sync::{
@@ -24,7 +27,7 @@ pub struct PhysicsSim
     pub dt: instant::Duration,
     input_tx: mpsc::Sender<InputEvent>,
     _handle: thread::JoinHandle<()>,
-    player: Arc<RwLock<Player>>,
+    player: Arc<RwLock<SpaceshipController>>,
 }
 
 
@@ -33,7 +36,7 @@ impl PhysicsSim
 {
     pub fn new<F: 'static + ForceField + Send>(
         dt: instant::Duration,
-        player: Player,
+        player: SpaceshipController,
         world: F,
     ) -> Self
     {
@@ -61,7 +64,7 @@ impl PhysicsSim
 
 
 
-    pub fn get_player(&'_ self) -> Option<RwLockReadGuard<'_, Player>>
+    pub fn get_player(&'_ self) -> Option<RwLockReadGuard<'_, SpaceshipController>>
     {
         self.player.read().ok()
     }
@@ -73,7 +76,7 @@ pub struct PhysicsThread<F: ForceField>
 {
     dt: instant::Duration,
     last_time: Instant,
-    player: Arc<RwLock<Player>>,
+    player: Arc<RwLock<SpaceshipController>>,
     world: F,
     input_rx: mpsc::Receiver<InputEvent>,
 }
@@ -84,7 +87,7 @@ impl<F: ForceField> PhysicsThread<F>
 {
     pub fn new(
         dt: instant::Duration,
-        player: Arc<RwLock<Player>>,
+        player: Arc<RwLock<SpaceshipController>>,
         world: F,
         input_rx: mpsc::Receiver<InputEvent>,
     ) -> Self
@@ -122,7 +125,11 @@ impl<F: ForceField> PhysicsThread<F>
                         _ => false,
                     };
                 }
-                player.update(self.dt, &self.world);
+                let force = self.world.sample_force(*player.body.state.get_pos())
+                    / player.body.properties.mass;
+
+                player.body.state.add_acceleration(force);
+                player.update(self.dt);
                 // println!("Update, {:?}, {:?}", dt, self.dt);
             }
         }

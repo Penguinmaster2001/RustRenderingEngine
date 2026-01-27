@@ -5,12 +5,10 @@ use crate::{
     },
     physics::physics_environment::ForceField,
     player::spaceship_controller::SpaceshipController,
-    rendering::camera::FreeCamera,
 };
 use nalgebra::{
     Point3,
     Vector2,
-    Vector3,
 };
 use winit::keyboard::KeyCode;
 
@@ -24,7 +22,6 @@ pub mod spaceship_controller;
 
 pub struct Player
 {
-    pub camera: FreeCamera,
     pub controller: SpaceshipController,
 }
 
@@ -32,18 +29,17 @@ pub struct Player
 
 impl Player
 {
-    pub fn new<T: Into<Point3<f32>>>(position: T) -> Self
+    pub fn new() -> Self
     {
-        let position = position.into();
         Self {
-            camera: FreeCamera::new(
-                position,
-                Vector3::x_axis().into_inner(),
-                Vector3::y_axis().into_inner(),
-            ),
+            // camera: FreeCamera::new(
+            //     position,
+            //     Vector3::x_axis().into_inner(),
+            //     Vector3::y_axis().into_inner(),
+            // ),
             controller: SpaceshipController::new(InputSettings {
                 sensitivity: 0.01,
-                speed: 10.0,
+                speed: 200.0,
             }),
         }
     }
@@ -56,12 +52,11 @@ impl Player
 
         self.controller.body.state.add_acceleration(force);
         self.controller.update(dt);
-        self.controller.update_camera(&mut self.camera);
     }
 
 
 
-    pub(crate) fn get_position(&self) -> &Point3<f32>
+    pub fn get_position(&self) -> &Point3<f32>
     {
         self.controller.body.state.get_pos()
     }
