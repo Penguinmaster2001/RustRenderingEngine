@@ -245,7 +245,7 @@ impl State
 
         let mut rng = ThreadRng::default();
         let mut celestial_bodies = CelestialBodyContainer::new();
-        celestial_bodies.generate_planets(50, 1_000_000.0, 50_000.0, &mut rng);
+        celestial_bodies.generate_planets(3, 1_000_000.0, 50_000.0, &mut rng);
 
         let mut celestial_meshes = CelestialMeshContainer::new();
         celestial_meshes.add_planets(&celestial_bodies.bodies, &renderer_state);
@@ -253,7 +253,7 @@ impl State
         let renderer = Renderer;
 
         let physics_sim = PhysicsSim::new(
-            Duration::from_secs_f32(1.0 / 120.0),
+            Duration::from_secs_f32(1.0 / 90.0),
             space_ship,
             celestial_bodies.clone(),
         );

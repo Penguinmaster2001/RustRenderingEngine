@@ -1,3 +1,5 @@
+use winit::keyboard::KeyCode;
+
 use crate::{
     input::{
         InputEvent,
@@ -102,7 +104,7 @@ impl<F: ForceField> PhysicsThread<F>
 
     pub fn run(&mut self)
     {
-        let scale = 20;
+        let mut scale = 4u32.pow(3);
         loop
         {
             let now = Instant::now();
@@ -119,7 +121,25 @@ impl<F: ForceField> PhysicsThread<F>
                     match event
                     {
                         InputEvent::MouseMotion { delta } => player.handle_mouse_movement(delta),
-                        InputEvent::Keyboard { code, pressed } => player.handle_key(code, pressed),
+                        InputEvent::Keyboard { code, pressed } =>
+                        {
+                            player.handle_key(code, pressed);
+                            if pressed
+                            {
+                                match code
+                                {
+                                    KeyCode::BracketRight => scale *= 4,
+                                    KeyCode::BracketLeft => scale /= 4,
+                                    _ => (),
+                                };
+                                scale = scale.clamp(1, 4u32.pow(11));
+                                true
+                            }
+                            else
+                            {
+                                false
+                            }
+                        }
                         _ => false,
                     };
                 }
