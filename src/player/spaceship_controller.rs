@@ -25,9 +25,9 @@ use winit::keyboard::KeyCode;
 pub struct SpaceshipController
 {
     controller: Controller<f32>,
-    forward: Unit<Vector3<f32>>,
+    pub forward: Unit<Vector3<f32>>,
     right: Unit<Vector3<f32>>,
-    up: Unit<Vector3<f32>>,
+    pub up: Unit<Vector3<f32>>,
     pub body: PhysicsBody,
     input_settings: InputSettings,
 }

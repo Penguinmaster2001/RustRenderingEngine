@@ -4,10 +4,7 @@ use crate::{
         InputHandler,
     },
     physics::physics_environment::ForceField,
-    player::{
-        Player,
-        spaceship_controller::SpaceshipController,
-    },
+    player::spaceship_controller::SpaceshipController,
 };
 use std::{
     sync::{

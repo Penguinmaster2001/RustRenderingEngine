@@ -18,7 +18,8 @@ use crate::{
         camera::{
             self,
             CameraUniform,
-            FreeCamera,
+            OrbitCamera,
+            camera_controller::CameraController,
         },
         lighting::{
             LightUniform,
@@ -73,7 +74,7 @@ pub struct State
     pub light_bind_group: wgpu::BindGroup,
     celestial_meshes: CelestialMeshContainer,
     physics_sim: PhysicsSim,
-    camera: FreeCamera,
+    camera_controller: CameraController<OrbitCamera>,
     renderer: Renderer,
     celestial_bodies: CelestialBodyContainer,
 }
@@ -101,11 +102,12 @@ impl State
             speed: 200.0,
         });
 
-        let camera = FreeCamera::new(
+        let camera_controller = CameraController::new(OrbitCamera::new(
             Vector3::zeros(),
+            10.0,
             Vector3::x_axis().into_inner(),
             Vector3::y_axis().into_inner(),
-        );
+        ));
 
         let projection = camera::Projection::new(
             renderer_state.config.width,
@@ -116,7 +118,7 @@ impl State
         );
 
         let mut camera_uniform = camera::CameraUniform::new();
-        camera_uniform.update_view_proj(&camera, &projection);
+        camera_uniform.update_view_proj(&camera_controller.camera, &projection);
 
         let camera_buffer = camera_uniform.create_camera_buffer(&renderer_state);
 
@@ -256,7 +258,7 @@ impl State
         );
 
         Ok(Self {
-            camera,
+            camera_controller,
             celestial_bodies,
             celestial_meshes,
             physics_sim,
@@ -421,9 +423,9 @@ impl State
 
         if let Some(player) = self.physics_sim.get_player()
         {
-            player.update_camera(&mut self.camera);
+            self.camera_controller.focus_body(&player);
             self.camera_uniform
-                .update_view_proj(&self.camera, &self.projection);
+                .update_view_proj(&self.camera_controller, &self.projection);
 
             let body = player.body;
             let trajectory = calculate_trajectory(

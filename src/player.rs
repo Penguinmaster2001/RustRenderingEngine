@@ -32,11 +32,6 @@ impl Player
     pub fn new() -> Self
     {
         Self {
-            // camera: FreeCamera::new(
-            //     position,
-            //     Vector3::x_axis().into_inner(),
-            //     Vector3::y_axis().into_inner(),
-            // ),
             controller: SpaceshipController::new(InputSettings {
                 sensitivity: 0.01,
                 speed: 200.0,
@@ -59,6 +54,16 @@ impl Player
     pub fn get_position(&self) -> &Point3<f32>
     {
         self.controller.body.state.get_pos()
+    }
+}
+
+
+
+impl Default for Player
+{
+    fn default() -> Self
+    {
+        Self::new()
     }
 }
 
