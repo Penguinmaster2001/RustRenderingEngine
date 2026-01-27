@@ -52,10 +52,10 @@ impl PhysicsSim
 
 
 
-    pub fn handle_input(&self, event: InputEvent)
+    pub fn handle_input(&self, event: &InputEvent)
     {
         self.input_tx
-            .send(event)
+            .send(*event)
             .expect("Should be able to send input event.");
     }
 
@@ -102,11 +102,12 @@ impl<F: ForceField> PhysicsThread<F>
 
     pub fn run(&mut self)
     {
+        let scale = 20;
         loop
         {
             let now = Instant::now();
             let dt = now - self.last_time;
-            if dt < self.dt
+            if dt * scale < self.dt
             {
                 continue;
             }

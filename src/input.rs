@@ -50,6 +50,7 @@ pub trait InputHandler
 
 
 
+#[derive(Clone, Copy)]
 pub enum InputEvent
 {
     MouseWheel

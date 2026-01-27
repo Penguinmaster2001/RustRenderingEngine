@@ -5,6 +5,7 @@ use crate::{
     },
     input::{
         InputEvent,
+        InputHandler,
         input_settings::InputSettings,
     },
     math,
@@ -244,7 +245,7 @@ impl State
 
         let mut rng = ThreadRng::default();
         let mut celestial_bodies = CelestialBodyContainer::new();
-        celestial_bodies.generate_planets(5, 1_000_000.0, 5_000.0, &mut rng);
+        celestial_bodies.generate_planets(50, 1_000_000.0, 50_000.0, &mut rng);
 
         let mut celestial_meshes = CelestialMeshContainer::new();
         celestial_meshes.add_planets(&celestial_bodies.bodies, &renderer_state);
@@ -252,7 +253,7 @@ impl State
         let renderer = Renderer;
 
         let physics_sim = PhysicsSim::new(
-            Duration::from_secs_f32(1.0 / 1000.0),
+            Duration::from_secs_f32(1.0 / 120.0),
             space_ship,
             celestial_bodies.clone(),
         );
@@ -430,14 +431,14 @@ impl State
             let body = player.body;
             let trajectory = calculate_trajectory(
                 self.physics_sim.dt.as_secs_f32(),
-                100 * 60 * 10,
+                200 * 60 * 10,
                 &body,
                 &self.celestial_bodies,
             );
 
             vertices = trajectory
                 .iter()
-                .map(|p| TextureVertex::new(*p, [0.0, 0.0]))
+                .map(|p| TextureVertex::new(p.0, [p.1, 0.0]))
                 .collect::<Vec<TextureVertex>>();
         }
         self.renderer_state.queue.write_buffer(
@@ -471,7 +472,11 @@ impl State
         }
         else
         {
-            self.physics_sim.handle_input(event);
+            self.physics_sim.handle_input(&event);
+            if let InputEvent::MouseWheel { delta } = event
+            {
+                self.camera_controller.handle_mouse_scroll(&delta);
+            }
         }
     }
 }
