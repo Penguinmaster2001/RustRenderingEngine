@@ -139,7 +139,7 @@ impl ApplicationHandler<State> for App
                     // Reconfigure the surface if it's lost or outdated
                     Err(wgpu::SurfaceError::Lost | wgpu::SurfaceError::Outdated) =>
                     {
-                        let size = state.renderer.render_state.window.inner_size();
+                        let size = state.renderer.window.inner_size();
                         state.resize(size.width, size.height);
                     }
 

@@ -1,8 +1,14 @@
-use crate::physics::{
-    physics_body::PhysicsBody,
-    physics_environment::ForceField,
+use crate::{
+    physics::{
+        physics_body::PhysicsBody,
+        physics_environment::ForceField,
+    },
+    rendering::{
+        mesh::MeshBuffer,
+        renderer::Renderer,
+    },
+    vertex::TextureVertex,
 };
-use nalgebra::Point3;
 
 
 
@@ -11,13 +17,14 @@ pub fn calculate_trajectory<W: ForceField>(
     num: usize,
     body: &PhysicsBody,
     world: &W,
-) -> Vec<(Point3<f32>, f32)>
+    renderer: &Renderer,
+) -> MeshBuffer
 {
     let mut trajectory_state = body.state;
 
     let len = num / 10000;
 
-    let mut trajectory = vec![(*trajectory_state.get_pos(), 0.0)];
+    let mut trajectory = vec![TextureVertex::new(*trajectory_state.get_pos(), [0.0, 0.0])];
     for i in 0..num
     {
         trajectory_state.add_acceleration(
@@ -27,9 +34,16 @@ pub fn calculate_trajectory<W: ForceField>(
 
         if i % len == 0
         {
-            trajectory.push((*trajectory_state.get_pos(), i as f32 / num as f32));
+            trajectory.push(TextureVertex::new(
+                *trajectory_state.get_pos(),
+                [i as f32 / num as f32, 0.0],
+            ));
         }
     }
 
-    trajectory
+    MeshBuffer::from_verts(
+        &trajectory,
+        &(0..trajectory.len() as u32).collect::<Vec<u32>>(),
+        renderer,
+    )
 }

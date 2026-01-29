@@ -1,11 +1,11 @@
 use crate::{
     celestial_bodies::planet::Planet,
     rendering::{
-        RenderState,
         mesh::{
             MeshBuffer,
             MeshData,
         },
+        renderer::Renderer,
     },
 };
 
@@ -38,7 +38,7 @@ impl CelestialMeshContainer
 
 
 
-    pub fn add_planets(&mut self, planets: &Vec<Planet>, render_state: &RenderState)
+    pub fn add_planets(&mut self, planets: &Vec<Planet>, render_state: &Renderer)
     {
         for planet in planets
         {

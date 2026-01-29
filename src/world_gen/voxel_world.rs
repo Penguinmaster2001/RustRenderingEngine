@@ -10,8 +10,8 @@ use crate::{
     physics::physics_environment::ForceField,
     player::Player,
     rendering::{
-        RenderState,
         mesh::MeshBuffer,
+        renderer::Renderer,
     },
     world_gen::world_generator::WorldGenerator,
 };
@@ -44,7 +44,7 @@ impl VoxelWorld
 
 
 
-    pub fn update(&mut self, player: &Player, renderer: &RenderState, _dt: instant::Duration)
+    pub fn update(&mut self, player: &Player, renderer: &Renderer, _dt: instant::Duration)
     {
         self.generator.generate_chunks(player.get_position(), 4);
 

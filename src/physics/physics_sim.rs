@@ -1,5 +1,3 @@
-use winit::keyboard::KeyCode;
-
 use crate::{
     input::{
         InputEvent,
@@ -18,6 +16,7 @@ use std::{
     thread,
     time::Instant,
 };
+use winit::keyboard::KeyCode;
 
 
 

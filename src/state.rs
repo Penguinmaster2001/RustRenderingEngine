@@ -15,7 +15,6 @@ use crate::{
     },
     player::spaceship_controller::SpaceshipController,
     rendering::{
-        RenderState,
         camera::{
             self,
             CameraUniform,
@@ -35,15 +34,13 @@ use crate::{
         renderer::Renderer,
     },
     texture,
-    vertex::{
-        TextureVertex,
-        Vertex,
-    },
 };
 use nalgebra::{
     Point3,
     Vector3,
     Vector4,
+    point,
+    vector,
 };
 use rand::rngs::ThreadRng;
 use std::{
@@ -80,20 +77,21 @@ impl State
 {
     pub async fn new(window: Arc<Window>) -> anyhow::Result<Self>
     {
-        let render_state = RenderState::new(window).await?;
-        render_state
-            .window
-            .set_cursor_grab(CursorGrabMode::Locked)?;
+        let renderer = Renderer::new(window).await?;
+        renderer.window.set_cursor_grab(CursorGrabMode::Locked)?;
 
-        let texture_bind_group_layout = State::create_texture_bind_group_layout(&render_state);
+        let texture_bind_group_layout = State::create_texture_bind_group_layout(&renderer);
 
         let diffuse_bind_group =
-            State::create_diffuse_bind_group(&render_state, &texture_bind_group_layout);
+            State::create_diffuse_bind_group(&renderer, &texture_bind_group_layout);
 
-        let (shader, line_shader) = State::create_shaders(&render_state);
+        let [shader, line_shader] = renderer.create_shaders(&[
+            include_str!("shader.wgsl"),
+            include_str!("line_shader.wgsl"),
+        ]);
 
         let space_ship = SpaceshipController::new(InputSettings {
-            sensitivity: 0.01,
+            sensitivity: 0.005,
             speed: 200.0,
         });
 
@@ -105,57 +103,40 @@ impl State
         ));
 
         let projection = camera::Projection::new(
-            render_state.config.width,
-            render_state.config.height,
+            renderer.config.width,
+            renderer.config.height,
             110.0 * math::DEG_TO_RAD as f32,
-            0.01,
-            1000.0,
+            1.0,
+            100000.0,
         );
 
         let mut camera_uniform = camera::CameraUniform::new();
         camera_uniform.update_view_proj(&camera_controller.camera, &projection);
 
-        let camera_buffer = camera_uniform.create_camera_buffer(&render_state);
+        let camera_buffer = camera_uniform.create_camera_buffer(&renderer);
 
         let (camera_bind_group, camera_bind_group_layout) =
-            CameraUniform::create_camera_bind_group(&camera_buffer, &render_state);
+            CameraUniform::create_camera_bind_group(&camera_buffer, &renderer);
 
         let sphere_lights = &[
-            SphereLight::new(
-                Point3::new(0.0, 30.0, 0.0),
-                Vector4::new(1.0, 1.0, 1.0, 1.0),
-                100.0,
-            ),
-            SphereLight::new(
-                Point3::new(30.0, 30.0, 0.0),
-                Vector4::new(1.0, 0.0, 0.0, 1.0),
-                100.0,
-            ),
-            SphereLight::new(
-                Point3::new(60.0, 30.0, 0.0),
-                Vector4::new(0.0, 1.0, 0.0, 1.0),
-                100.0,
-            ),
-            SphereLight::new(
-                Point3::new(90.0, 30.0, 0.0),
-                Vector4::new(0.0, 0.0, 1.0, 1.0),
-                100.0,
-            ),
+            SphereLight::new((00.0, 30.0, 0.0), (1.0, 1.0, 1.0, 1.0), 100.0),
+            SphereLight::new((30.0, 30.0, 0.0), (1.0, 0.0, 0.0, 1.0), 100.0),
+            SphereLight::new((60.0, 30.0, 0.0), (0.0, 1.0, 0.0, 1.0), 100.0),
+            SphereLight::new((90.0, 30.0, 0.0), (0.0, 0.0, 1.0, 1.0), 100.0),
         ];
-
         let sun_lights = &[
             SunLight::new((8.0, -12.0, 3.0), (1.0, 0.8, 0.2, 1.0), 0.5),
             SunLight::new((-8.0, -12.0, -2.0), (0.2, 0.8, 1.0, 1.0), 0.2),
         ];
 
         let light_uniform = LightUniform::new(sphere_lights, sun_lights);
-        let light_buffer = light_uniform.create_light_buffer(&render_state);
+        let light_buffer = light_uniform.create_light_buffer(&renderer);
 
         let (light_bind_group, light_bind_group_layout) =
-            LightUniform::create_light_bind_group(&light_buffer, &render_state);
+            LightUniform::create_light_bind_group(&light_buffer, &renderer);
 
         let render_pipeline_layout =
-            render_state
+            renderer
                 .device
                 .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                     label: Some("Render Pipeline Layout"),
@@ -168,72 +149,19 @@ impl State
                 });
 
         let depth_texture = texture::Texture::create_depth_texture(
-            &render_state.device,
-            &render_state.config,
+            &renderer.device,
+            &renderer.config,
             "depth_texture",
         );
 
-        let render_pipeline =
-            render_state
-                .device
-                .create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-                    label: Some("Render Pipeline"),
-                    layout: Some(&render_pipeline_layout),
-
-                    vertex: wgpu::VertexState {
-                        module: &shader,
-                        entry_point: Some("vs_main"),
-                        buffers: &[TextureVertex::desc()],
-                        compilation_options: wgpu::PipelineCompilationOptions::default(),
-                    },
-
-                    fragment: Some(wgpu::FragmentState {
-                        module: &shader,
-                        entry_point: Some("fs_main"),
-                        targets: &[Some(wgpu::ColorTargetState {
-                            format: render_state.config.format,
-                            blend: Some(wgpu::BlendState::REPLACE),
-                            write_mask: wgpu::ColorWrites::ALL,
-                        })],
-                        compilation_options: wgpu::PipelineCompilationOptions::default(),
-                    }),
-
-                    primitive: wgpu::PrimitiveState {
-                        topology: wgpu::PrimitiveTopology::TriangleList,
-                        strip_index_format: None,
-                        front_face: wgpu::FrontFace::Ccw,
-                        cull_mode: Some(wgpu::Face::Back),
-                        // Setting this to anything other than Fill requires Features::NON_FILL_POLYGON_MODE
-                        polygon_mode: wgpu::PolygonMode::Fill,
-                        // Requires Features::DEPTH_CLIP_CONTROL
-                        unclipped_depth: false,
-                        // Requires Features::CONSERVATIVE_RASTERIZATION
-                        conservative: false,
-                    },
-
-                    depth_stencil: Some(wgpu::DepthStencilState {
-                        format: texture::Texture::DEPTH_FORMAT,
-                        depth_write_enabled: true,
-                        depth_compare: wgpu::CompareFunction::Less,
-                        stencil: wgpu::StencilState::default(),
-                        bias: wgpu::DepthBiasState::default(),
-                    }),
-
-                    multisample: wgpu::MultisampleState {
-                        count: 1,
-                        mask: !0,
-                        alpha_to_coverage_enabled: false,
-                    },
-
-                    multiview: None,
-                    cache: None,
-                });
-
-        let line_render_pipeline = Renderer::create_line_pipeline(
-            &render_state,
-            &texture_bind_group_layout,
-            &camera_bind_group_layout,
-            &light_bind_group_layout,
+        let render_pipeline = renderer.create_render_pipeline(
+            &render_pipeline_layout,
+            wgpu::PrimitiveTopology::TriangleList,
+            &shader,
+        );
+        let line_render_pipeline = renderer.create_render_pipeline(
+            &render_pipeline_layout,
+            wgpu::PrimitiveTopology::LineStrip,
             &line_shader,
         );
 
@@ -242,9 +170,7 @@ impl State
         celestial_bodies.generate_planets(3, 1_000_000.0, 50_000.0, &mut rng);
 
         let mut celestial_meshes = CelestialMeshContainer::new();
-        celestial_meshes.add_planets(&celestial_bodies.bodies, &render_state);
-
-        let renderer = Renderer::new(render_state);
+        celestial_meshes.add_planets(&celestial_bodies.bodies, &renderer);
 
         let physics_sim = PhysicsSim::new(
             Duration::from_secs_f32(1.0 / 90.0),
@@ -261,7 +187,7 @@ impl State
                     pipeline_id: 0,
                 },
                 GeometryGroup {
-                    meshes: vec![MeshBuffer::from_verts(&[], &[], &renderer.render_state)],
+                    meshes: vec![MeshBuffer::from_verts(&[], &[], &renderer)],
                     pipeline_id: 1,
                 },
             ],
@@ -282,7 +208,7 @@ impl State
 
 
 
-    fn create_texture_bind_group_layout(renderer: &RenderState) -> BindGroupLayout
+    fn create_texture_bind_group_layout(renderer: &Renderer) -> BindGroupLayout
     {
         renderer
             .device
@@ -334,7 +260,7 @@ impl State
 
 
     fn create_diffuse_bind_group(
-        renderer: &RenderState,
+        renderer: &Renderer,
         texture_bind_group_layout: &BindGroupLayout,
     ) -> wgpu::BindGroup
     {
@@ -384,36 +310,16 @@ impl State
 
 
 
-    fn create_shaders(renderer: &RenderState) -> (wgpu::ShaderModule, wgpu::ShaderModule)
-    {
-        (
-            renderer
-                .device
-                .create_shader_module(wgpu::ShaderModuleDescriptor {
-                    label: Some("Shader"),
-                    source: wgpu::ShaderSource::Wgsl(include_str!("shader.wgsl").into()),
-                }),
-            renderer
-                .device
-                .create_shader_module(wgpu::ShaderModuleDescriptor {
-                    label: Some("Line Shader"),
-                    source: wgpu::ShaderSource::Wgsl(include_str!("line_shader.wgsl").into()),
-                }),
-        )
-    }
-
-
-
     pub fn resize(&mut self, width: u32, height: u32)
     {
-        self.renderer.render_state.resize(width, height);
+        self.renderer.resize(width, height);
         self.projection.resize(width, height);
 
         if width > 0 && height > 0
         {
             self.render_data.depth_texture = texture::Texture::create_depth_texture(
-                &self.renderer.render_state.device,
-                &self.renderer.render_state.config,
+                &self.renderer.device,
+                &self.renderer.config,
                 "depth_texture",
             );
         }
@@ -423,37 +329,24 @@ impl State
 
     pub fn render(&mut self) -> Result<(), wgpu::SurfaceError>
     {
-        let mut vertices = vec![];
-
         if let Some(player) = self.physics_sim.get_player()
         {
             self.camera_controller.focus_body(&player);
             self.camera_uniform
                 .update_view_proj(&self.camera_controller, &self.projection);
 
-            let body = player.body;
-            let trajectory = calculate_trajectory(
+            self.render_data.geometries[1].meshes[0] = calculate_trajectory(
                 self.physics_sim.dt.as_secs_f32(),
                 200 * 60 * 10,
-                &body,
+                &player.body,
                 &self.celestial_bodies,
+                &self.renderer,
             );
-
-            vertices = trajectory
-                .iter()
-                .map(|p| TextureVertex::new(p.0, [p.1, 0.0]))
-                .collect::<Vec<TextureVertex>>();
         }
-        self.renderer.render_state.queue.write_buffer(
+        self.renderer.queue.write_buffer(
             &self.camera_buffer,
             0,
             bytemuck::cast_slice(&[self.camera_uniform]),
-        );
-
-        self.render_data.geometries[1].meshes[0] = MeshBuffer::from_verts(
-            &vertices,
-            &(0..vertices.len() as u32).collect::<Vec<u32>>(),
-            &self.renderer.render_state,
         );
 
         self.renderer.render(&self.render_data)

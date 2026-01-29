@@ -1,6 +1,5 @@
 use crate::{
     rendering::{
-        RenderState,
         mesh_renderer::DrawMeshes,
         render_pass_data::RenderData,
     },
@@ -10,48 +9,188 @@ use crate::{
         Vertex,
     },
 };
+use std::sync::Arc;
 use wgpu;
+use winit::window::Window;
 
 
 
 pub struct Renderer
 {
-    pub render_state: RenderState,
+    pub surface: wgpu::Surface<'static>,
+    pub device: wgpu::Device,
+    pub queue: wgpu::Queue,
+    pub config: wgpu::SurfaceConfiguration,
+    pub window: Arc<Window>,
+    pub is_surface_configured: bool,
 }
 
 
 
 impl Renderer
 {
-    pub fn new(render_state: RenderState) -> Self
+    pub async fn new(window: Arc<Window>) -> anyhow::Result<Self>
     {
-        Self { render_state }
+        let size = window.inner_size();
+
+        // The instance is a handle to our GPU
+        // BackendBit::PRIMARY => Vulkan + Metal + DX12 + Browser WebGPU
+        let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
+            backends: wgpu::Backends::PRIMARY,
+            ..Default::default()
+        });
+
+        let surface = instance.create_surface(window.clone()).unwrap();
+
+        let adapter = instance
+            .request_adapter(&wgpu::RequestAdapterOptions {
+                power_preference: wgpu::PowerPreference::default(),
+                compatible_surface: Some(&surface),
+                force_fallback_adapter: false,
+            })
+            .await?;
+
+        let (device, queue) = adapter
+            .request_device(&wgpu::DeviceDescriptor {
+                label: None,
+                required_features: wgpu::Features::empty(),
+                experimental_features: wgpu::ExperimentalFeatures::disabled(),
+                required_limits: wgpu::Limits::default(),
+                memory_hints: Default::default(),
+                trace: wgpu::Trace::Off,
+            })
+            .await?;
+
+        let surface_caps = surface.get_capabilities(&adapter);
+
+        let surface_format = surface_caps
+            .formats
+            .iter()
+            .find(|f| f.is_srgb())
+            .copied()
+            .unwrap_or(surface_caps.formats[0]);
+
+        let config = wgpu::SurfaceConfiguration {
+            usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
+            format: surface_format,
+            width: size.width,
+            height: size.height,
+            present_mode: surface_caps.present_modes[0],
+            alpha_mode: surface_caps.alpha_modes[0],
+            view_formats: vec![],
+            desired_maximum_frame_latency: 2,
+        };
+
+        Ok(Self {
+            surface,
+            device,
+            queue,
+            config,
+            window,
+            is_surface_configured: false,
+        })
+    }
+
+
+
+    pub fn resize(&mut self, width: u32, height: u32)
+    {
+        if width > 0 && height > 0
+        {
+            self.config.width = width;
+            self.config.height = height;
+            self.surface.configure(&self.device, &self.config);
+            self.is_surface_configured = true;
+        }
+    }
+
+
+    pub fn create_render_pipeline(
+        &self,
+        layout: &wgpu::PipelineLayout,
+        topology: wgpu::PrimitiveTopology,
+        shader: &wgpu::ShaderModule,
+    ) -> wgpu::RenderPipeline
+    {
+        self.device
+            .create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+                label: Some("Line Render Pipeline"),
+                layout: Some(layout),
+
+                vertex: wgpu::VertexState {
+                    module: shader,
+                    entry_point: Some("vs_main"),
+                    buffers: &[TextureVertex::desc()],
+                    compilation_options: wgpu::PipelineCompilationOptions::default(),
+                },
+
+                fragment: Some(wgpu::FragmentState {
+                    module: shader,
+                    entry_point: Some("fs_main"),
+                    targets: &[Some(wgpu::ColorTargetState {
+                        format: self.config.format,
+                        blend: Some(wgpu::BlendState::REPLACE),
+                        write_mask: wgpu::ColorWrites::ALL,
+                    })],
+                    compilation_options: wgpu::PipelineCompilationOptions::default(),
+                }),
+
+                primitive: wgpu::PrimitiveState {
+                    // topology: wgpu::PrimitiveTopology::LineStrip,
+                    topology,
+                    strip_index_format: None,
+                    front_face: wgpu::FrontFace::Ccw,
+                    cull_mode: Some(wgpu::Face::Back),
+                    // Setting this to anything other than Fill requires Features::NON_FILL_POLYGON_MODE
+                    polygon_mode: wgpu::PolygonMode::Fill,
+                    // Requires Features::DEPTH_CLIP_CONTROL
+                    unclipped_depth: false,
+                    // Requires Features::CONSERVATIVE_RASTERIZATION
+                    conservative: false,
+                },
+
+                depth_stencil: Some(wgpu::DepthStencilState {
+                    format: texture::Texture::DEPTH_FORMAT,
+                    depth_write_enabled: true,
+                    depth_compare: wgpu::CompareFunction::Less,
+                    stencil: wgpu::StencilState::default(),
+                    bias: wgpu::DepthBiasState::default(),
+                }),
+
+                multisample: wgpu::MultisampleState {
+                    count: 1,
+                    mask: !0,
+                    alpha_to_coverage_enabled: false,
+                },
+
+                multiview: None,
+                cache: None,
+            })
     }
 
 
 
     pub fn render(&self, data: &RenderData) -> Result<(), wgpu::SurfaceError>
     {
-        self.render_state.window.request_redraw();
+        self.window.request_redraw();
 
         // We can't render unless the surface is configured
-        if !self.render_state.is_surface_configured
+        if !self.is_surface_configured
         {
             return Ok(());
         }
 
-        let output = self.render_state.surface.get_current_texture()?;
+        let output = self.surface.get_current_texture()?;
 
         let view = output
             .texture
             .create_view(&wgpu::TextureViewDescriptor::default());
 
-        let mut encoder =
-            self.render_state
-                .device
-                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                    label: Some("Render Encoder"),
-                });
+        let mut encoder = self
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("Render Encoder"),
+            });
 
         {
             let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
@@ -98,23 +237,9 @@ impl Renderer
                     render_pass.draw_meshes(mesh.iter());
                 }
             }
-
-            // render_pass.set_pipeline(&state.render_pipeline);
-
-            // render_pass.set_bind_group(0, &state.diffuse_bind_group, &[]);
-            // render_pass.set_bind_group(1, &state.camera_bind_group, &[]);
-            // render_pass.set_bind_group(2, &state.light_bind_group, &[]);
-
-            // render_pass.draw_meshes(meshes);
-
-            // render_pass.set_pipeline(&state.line_render_pipeline);
-
-            // render_pass.draw_meshes(lines);
         }
 
-        self.render_state
-            .queue
-            .submit(std::iter::once(encoder.finish()));
+        self.queue.submit(std::iter::once(encoder.finish()));
         output.present();
 
         Ok(())
@@ -122,80 +247,14 @@ impl Renderer
 
 
 
-    pub fn create_line_pipeline(
-        renderer_state: &RenderState,
-        texture_bind_group_layout: &wgpu::BindGroupLayout,
-        camera_bind_group_layout: &wgpu::BindGroupLayout,
-        light_bind_group_layout: &wgpu::BindGroupLayout,
-        shader: &wgpu::ShaderModule,
-    ) -> wgpu::RenderPipeline
+    pub fn create_shaders<const N: usize>(&self, files: &[&str; N]) -> [wgpu::ShaderModule; N]
     {
-        let render_pipeline_layout =
-            renderer_state
-                .device
-                .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                    label: Some("Line Render Pipeline Layout"),
-                    bind_group_layouts: &[
-                        texture_bind_group_layout,
-                        camera_bind_group_layout,
-                        light_bind_group_layout,
-                    ],
-                    push_constant_ranges: &[],
-                });
-
-        renderer_state
-            .device
-            .create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-                label: Some("Line Render Pipeline"),
-                layout: Some(&render_pipeline_layout),
-
-                vertex: wgpu::VertexState {
-                    module: shader,
-                    entry_point: Some("vs_main"),
-                    buffers: &[TextureVertex::desc()],
-                    compilation_options: wgpu::PipelineCompilationOptions::default(),
-                },
-
-                fragment: Some(wgpu::FragmentState {
-                    module: shader,
-                    entry_point: Some("fs_main"),
-                    targets: &[Some(wgpu::ColorTargetState {
-                        format: renderer_state.config.format,
-                        blend: Some(wgpu::BlendState::REPLACE),
-                        write_mask: wgpu::ColorWrites::ALL,
-                    })],
-                    compilation_options: wgpu::PipelineCompilationOptions::default(),
-                }),
-
-                primitive: wgpu::PrimitiveState {
-                    topology: wgpu::PrimitiveTopology::LineStrip,
-                    strip_index_format: None,
-                    front_face: wgpu::FrontFace::Ccw,
-                    cull_mode: Some(wgpu::Face::Back),
-                    // Setting this to anything other than Fill requires Features::NON_FILL_POLYGON_MODE
-                    polygon_mode: wgpu::PolygonMode::Fill,
-                    // Requires Features::DEPTH_CLIP_CONTROL
-                    unclipped_depth: false,
-                    // Requires Features::CONSERVATIVE_RASTERIZATION
-                    conservative: false,
-                },
-
-                depth_stencil: Some(wgpu::DepthStencilState {
-                    format: texture::Texture::DEPTH_FORMAT,
-                    depth_write_enabled: true,
-                    depth_compare: wgpu::CompareFunction::Less,
-                    stencil: wgpu::StencilState::default(),
-                    bias: wgpu::DepthBiasState::default(),
-                }),
-
-                multisample: wgpu::MultisampleState {
-                    count: 1,
-                    mask: !0,
-                    alpha_to_coverage_enabled: false,
-                },
-
-                multiview: None,
-                cache: None,
-            })
+        files.map(|f| {
+            self.device
+                .create_shader_module(wgpu::ShaderModuleDescriptor {
+                    label: Some("Shader"),
+                    source: wgpu::ShaderSource::Wgsl(f.into()),
+                })
+        })
     }
 }
