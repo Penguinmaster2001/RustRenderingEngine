@@ -28,12 +28,13 @@ use crate::{
             SunLight,
         },
         mesh::MeshBuffer,
+        render_pass_data::{
+            GeometryGroup,
+            RenderData,
+        },
         renderer::Renderer,
     },
-    texture::{
-        self,
-        Texture,
-    },
+    texture,
     vertex::{
         TextureVertex,
         Vertex,
@@ -63,20 +64,13 @@ use winit::{
 
 pub struct State
 {
-    pub renderer_state: RenderState,
-    pub render_pipeline: wgpu::RenderPipeline,
-    pub line_render_pipeline: wgpu::RenderPipeline,
-    pub diffuse_bind_group: wgpu::BindGroup,
-    pub depth_texture: Texture,
     projection: camera::Projection,
     camera_uniform: camera::CameraUniform,
     camera_buffer: wgpu::Buffer,
-    pub camera_bind_group: wgpu::BindGroup,
-    pub light_bind_group: wgpu::BindGroup,
-    celestial_meshes: CelestialMeshContainer,
+    render_data: RenderData,
     physics_sim: PhysicsSim,
     camera_controller: CameraController<OrbitCamera>,
-    renderer: Renderer,
+    pub renderer: Renderer,
     celestial_bodies: CelestialBodyContainer,
 }
 
@@ -86,17 +80,17 @@ impl State
 {
     pub async fn new(window: Arc<Window>) -> anyhow::Result<Self>
     {
-        let renderer_state = RenderState::new(window).await?;
-        renderer_state
+        let render_state = RenderState::new(window).await?;
+        render_state
             .window
             .set_cursor_grab(CursorGrabMode::Locked)?;
 
-        let texture_bind_group_layout = State::create_texture_bind_group_layout(&renderer_state);
+        let texture_bind_group_layout = State::create_texture_bind_group_layout(&render_state);
 
         let diffuse_bind_group =
-            State::create_diffuse_bind_group(&renderer_state, &texture_bind_group_layout);
+            State::create_diffuse_bind_group(&render_state, &texture_bind_group_layout);
 
-        let (shader, line_shader) = State::create_shaders(&renderer_state);
+        let (shader, line_shader) = State::create_shaders(&render_state);
 
         let space_ship = SpaceshipController::new(InputSettings {
             sensitivity: 0.01,
@@ -111,8 +105,8 @@ impl State
         ));
 
         let projection = camera::Projection::new(
-            renderer_state.config.width,
-            renderer_state.config.height,
+            render_state.config.width,
+            render_state.config.height,
             110.0 * math::DEG_TO_RAD as f32,
             0.01,
             1000.0,
@@ -121,10 +115,10 @@ impl State
         let mut camera_uniform = camera::CameraUniform::new();
         camera_uniform.update_view_proj(&camera_controller.camera, &projection);
 
-        let camera_buffer = camera_uniform.create_camera_buffer(&renderer_state);
+        let camera_buffer = camera_uniform.create_camera_buffer(&render_state);
 
         let (camera_bind_group, camera_bind_group_layout) =
-            CameraUniform::create_camera_bind_group(&camera_buffer, &renderer_state);
+            CameraUniform::create_camera_bind_group(&camera_buffer, &render_state);
 
         let sphere_lights = &[
             SphereLight::new(
@@ -155,13 +149,13 @@ impl State
         ];
 
         let light_uniform = LightUniform::new(sphere_lights, sun_lights);
-        let light_buffer = light_uniform.create_light_buffer(&renderer_state);
+        let light_buffer = light_uniform.create_light_buffer(&render_state);
 
         let (light_bind_group, light_bind_group_layout) =
-            LightUniform::create_light_bind_group(&light_buffer, &renderer_state);
+            LightUniform::create_light_bind_group(&light_buffer, &render_state);
 
         let render_pipeline_layout =
-            renderer_state
+            render_state
                 .device
                 .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                     label: Some("Render Pipeline Layout"),
@@ -174,13 +168,13 @@ impl State
                 });
 
         let depth_texture = texture::Texture::create_depth_texture(
-            &renderer_state.device,
-            &renderer_state.config,
+            &render_state.device,
+            &render_state.config,
             "depth_texture",
         );
 
         let render_pipeline =
-            renderer_state
+            render_state
                 .device
                 .create_render_pipeline(&wgpu::RenderPipelineDescriptor {
                     label: Some("Render Pipeline"),
@@ -197,7 +191,7 @@ impl State
                         module: &shader,
                         entry_point: Some("fs_main"),
                         targets: &[Some(wgpu::ColorTargetState {
-                            format: renderer_state.config.format,
+                            format: render_state.config.format,
                             blend: Some(wgpu::BlendState::REPLACE),
                             write_mask: wgpu::ColorWrites::ALL,
                         })],
@@ -236,7 +230,7 @@ impl State
                 });
 
         let line_render_pipeline = Renderer::create_line_pipeline(
-            &renderer_state,
+            &render_state,
             &texture_bind_group_layout,
             &camera_bind_group_layout,
             &light_bind_group_layout,
@@ -248,9 +242,9 @@ impl State
         celestial_bodies.generate_planets(3, 1_000_000.0, 50_000.0, &mut rng);
 
         let mut celestial_meshes = CelestialMeshContainer::new();
-        celestial_meshes.add_planets(&celestial_bodies.bodies, &renderer_state);
+        celestial_meshes.add_planets(&celestial_bodies.bodies, &render_state);
 
-        let renderer = Renderer;
+        let renderer = Renderer::new(render_state);
 
         let physics_sim = PhysicsSim::new(
             Duration::from_secs_f32(1.0 / 90.0),
@@ -258,22 +252,31 @@ impl State
             celestial_bodies.clone(),
         );
 
+        let render_data = RenderData::new(
+            vec![diffuse_bind_group, camera_bind_group, light_bind_group],
+            vec![render_pipeline, line_render_pipeline],
+            vec![
+                GeometryGroup {
+                    meshes: celestial_meshes.meshes,
+                    pipeline_id: 0,
+                },
+                GeometryGroup {
+                    meshes: vec![MeshBuffer::from_verts(&[], &[], &renderer.render_state)],
+                    pipeline_id: 1,
+                },
+            ],
+            depth_texture,
+        );
+
         Ok(Self {
             camera_controller,
             celestial_bodies,
-            celestial_meshes,
             physics_sim,
             renderer,
-            renderer_state,
-            render_pipeline,
-            line_render_pipeline,
-            diffuse_bind_group,
-            depth_texture,
             projection,
             camera_uniform,
             camera_buffer,
-            camera_bind_group,
-            light_bind_group,
+            render_data,
         })
     }
 
@@ -403,14 +406,14 @@ impl State
 
     pub fn resize(&mut self, width: u32, height: u32)
     {
-        self.renderer_state.resize(width, height);
+        self.renderer.render_state.resize(width, height);
         self.projection.resize(width, height);
 
         if width > 0 && height > 0
         {
-            self.depth_texture = texture::Texture::create_depth_texture(
-                &self.renderer_state.device,
-                &self.renderer_state.config,
+            self.render_data.depth_texture = texture::Texture::create_depth_texture(
+                &self.renderer.render_state.device,
+                &self.renderer.render_state.config,
                 "depth_texture",
             );
         }
@@ -441,22 +444,19 @@ impl State
                 .map(|p| TextureVertex::new(p.0, [p.1, 0.0]))
                 .collect::<Vec<TextureVertex>>();
         }
-        self.renderer_state.queue.write_buffer(
+        self.renderer.render_state.queue.write_buffer(
             &self.camera_buffer,
             0,
             bytemuck::cast_slice(&[self.camera_uniform]),
         );
 
-        self.renderer.render(
-            self,
-            self.celestial_meshes.meshes.iter(),
-            [MeshBuffer::from_verts(
-                &vertices,
-                &(0..vertices.len() as u32).collect::<Vec<u32>>(),
-                &self.renderer_state,
-            )]
-            .iter(),
-        )
+        self.render_data.geometries[1].meshes[0] = MeshBuffer::from_verts(
+            &vertices,
+            &(0..vertices.len() as u32).collect::<Vec<u32>>(),
+            &self.renderer.render_state,
+        );
+
+        self.renderer.render(&self.render_data)
     }
 
 

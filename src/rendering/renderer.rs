@@ -1,10 +1,9 @@
 use crate::{
     rendering::{
         RenderState,
-        mesh::MeshBuffer,
         mesh_renderer::DrawMeshes,
+        render_pass_data::RenderData,
     },
-    state::State,
     texture,
     vertex::{
         TextureVertex,
@@ -15,36 +14,40 @@ use wgpu;
 
 
 
-pub struct Renderer;
+pub struct Renderer
+{
+    pub render_state: RenderState,
+}
 
 
 
 impl Renderer
 {
-    pub fn render<'m, I: Iterator<Item = &'m MeshBuffer>>(
-        &self,
-        state: &State,
-        meshes: I,
-        lines: I,
-    ) -> Result<(), wgpu::SurfaceError>
+    pub fn new(render_state: RenderState) -> Self
     {
-        state.renderer_state.window.request_redraw();
+        Self { render_state }
+    }
+
+
+
+    pub fn render(&self, data: &RenderData) -> Result<(), wgpu::SurfaceError>
+    {
+        self.render_state.window.request_redraw();
 
         // We can't render unless the surface is configured
-        if !state.renderer_state.is_surface_configured
+        if !self.render_state.is_surface_configured
         {
             return Ok(());
         }
 
-        let output = state.renderer_state.surface.get_current_texture()?;
+        let output = self.render_state.surface.get_current_texture()?;
 
         let view = output
             .texture
             .create_view(&wgpu::TextureViewDescriptor::default());
 
         let mut encoder =
-            state
-                .renderer_state
+            self.render_state
                 .device
                 .create_command_encoder(&wgpu::CommandEncoderDescriptor {
                     label: Some("Render Encoder"),
@@ -68,7 +71,7 @@ impl Renderer
                     depth_slice: None,
                 })],
                 depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
-                    view: &state.depth_texture.view,
+                    view: &data.depth_texture.view,
                     depth_ops: Some(wgpu::Operations {
                         load: wgpu::LoadOp::Clear(1.0),
                         store: wgpu::StoreOp::Store,
@@ -79,21 +82,37 @@ impl Renderer
                 timestamp_writes: None,
             });
 
-            render_pass.set_pipeline(&state.render_pipeline);
+            for (index, bind_group) in data.bind_groups.iter().enumerate()
+            {
+                render_pass.set_bind_group(index as u32, bind_group, &[]);
+            }
 
-            render_pass.set_bind_group(0, &state.diffuse_bind_group, &[]);
-            render_pass.set_bind_group(1, &state.camera_bind_group, &[]);
-            render_pass.set_bind_group(2, &state.light_bind_group, &[]);
+            // data.geometries.sort_by_key(|g| g.pipeline_id);
+            for c in data
+                .geometries
+                .chunk_by(|g1, g2| g1.pipeline_id == g2.pipeline_id)
+            {
+                render_pass.set_pipeline(&data.pipelines[c[0].pipeline_id]);
+                for mesh in c.iter().map(|g| &g.meshes)
+                {
+                    render_pass.draw_meshes(mesh.iter());
+                }
+            }
 
-            render_pass.draw_meshes(meshes);
+            // render_pass.set_pipeline(&state.render_pipeline);
 
-            render_pass.set_pipeline(&state.line_render_pipeline);
+            // render_pass.set_bind_group(0, &state.diffuse_bind_group, &[]);
+            // render_pass.set_bind_group(1, &state.camera_bind_group, &[]);
+            // render_pass.set_bind_group(2, &state.light_bind_group, &[]);
 
-            render_pass.draw_meshes(lines);
+            // render_pass.draw_meshes(meshes);
+
+            // render_pass.set_pipeline(&state.line_render_pipeline);
+
+            // render_pass.draw_meshes(lines);
         }
 
-        state
-            .renderer_state
+        self.render_state
             .queue
             .submit(std::iter::once(encoder.finish()));
         output.present();
