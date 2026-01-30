@@ -1,6 +1,6 @@
 use crate::{
     rendering::renderer::Renderer,
-    vertex::TextureVertex,
+    vertex::Vertex,
 };
 use wgpu::util::DeviceExt;
 
@@ -10,9 +10,9 @@ pub mod primatives;
 
 
 
-pub struct MeshData
+pub struct MeshData<V: Vertex>
 {
-    pub vertices: Vec<TextureVertex>,
+    pub vertices: Vec<V>,
     pub indices: Vec<u32>,
     pub vertex_count: u32,
 }
@@ -30,7 +30,11 @@ pub struct MeshBuffer
 
 impl MeshBuffer
 {
-    pub fn from_verts(vertices: &[TextureVertex], indices: &[u32], renderer: &Renderer) -> Self
+    pub fn from_verts<V: Vertex + bytemuck::NoUninit>(
+        vertices: &[V],
+        indices: &[u32],
+        renderer: &Renderer,
+    ) -> Self
     {
         let vertex_buffer = renderer
             .device
@@ -57,7 +61,10 @@ impl MeshBuffer
 
 
 
-    pub fn from_data(chunk_mesh_data: &MeshData, renderer: &Renderer) -> Self
+    pub fn from_data<V: Vertex + bytemuck::NoUninit>(
+        chunk_mesh_data: &MeshData<V>,
+        renderer: &Renderer,
+    ) -> Self
     {
         MeshBuffer::from_verts(
             &chunk_mesh_data.vertices,

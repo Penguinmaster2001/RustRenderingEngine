@@ -1,14 +1,15 @@
+use crate::{
+    model,
+    texture,
+    vertex::ModelVertex,
+};
 use std::io::{
     BufReader,
     Cursor,
 };
-
 use wgpu::util::DeviceExt;
 
-use crate::{
-    model,
-    texture,
-};
+
 
 pub async fn load_string(file_name: &str) -> anyhow::Result<String>
 {
@@ -109,7 +110,7 @@ pub async fn load_model(
                 .map(|i| {
                     if m.mesh.normals.is_empty()
                     {
-                        model::ModelVertex {
+                        ModelVertex {
                             position: [
                                 m.mesh.positions[i * 3],
                                 m.mesh.positions[i * 3 + 1],
@@ -124,7 +125,7 @@ pub async fn load_model(
                     }
                     else
                     {
-                        model::ModelVertex {
+                        ModelVertex {
                             position: [
                                 m.mesh.positions[i * 3],
                                 m.mesh.positions[i * 3 + 1],

@@ -4,6 +4,7 @@ use crate::{
         ChunkContainer,
     },
     rendering::mesh::MeshData,
+    vertex::TextureVertex,
 };
 use nalgebra::{
     Point3,
@@ -33,7 +34,7 @@ pub struct WorldGenerator
 {
     pub load_radius: i64,
     job_tx: mpsc::Sender<ChunkJob>,
-    result_rx: mpsc::Receiver<(Chunk, MeshData)>,
+    result_rx: mpsc::Receiver<(Chunk, MeshData<TextureVertex>)>,
     _worker_handles: Vec<thread::JoinHandle<()>>,
     generated_chunks: HashSet<Point3<i64>>,
 }
@@ -45,7 +46,7 @@ impl WorldGenerator
     pub fn new(load_radius: i64, num_workers: usize) -> Self
     {
         let (job_tx, job_rx) = mpsc::channel::<ChunkJob>();
-        let (result_tx, result_rx) = mpsc::channel::<(Chunk, MeshData)>();
+        let (result_tx, result_rx) = mpsc::channel::<(Chunk, MeshData<TextureVertex>)>();
 
         let job_rx = Arc::new(Mutex::new(job_rx));
         let result_tx = Arc::new(result_tx);
@@ -143,7 +144,7 @@ impl WorldGenerator
 
 
 
-    pub fn drain_results(&mut self) -> Vec<(Chunk, MeshData)>
+    pub fn drain_results(&mut self) -> Vec<(Chunk, MeshData<TextureVertex>)>
     {
         let mut out = Vec::new();
 

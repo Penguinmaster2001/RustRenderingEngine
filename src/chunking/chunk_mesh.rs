@@ -22,7 +22,7 @@ use nalgebra::{
 
 
 
-impl MeshData
+impl MeshData<TextureVertex>
 {
     pub fn from_chunk(chunk: &Chunk) -> Self
     {

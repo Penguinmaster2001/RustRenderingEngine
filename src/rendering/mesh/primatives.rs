@@ -10,7 +10,7 @@ use std::f32::consts::PI;
 
 
 
-impl MeshData
+impl MeshData<TextureVertex>
 {
     pub fn new_uv_sphere<P: Into<Point3<f32>>>(
         radius: f32,

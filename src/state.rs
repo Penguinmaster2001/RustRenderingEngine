@@ -34,14 +34,9 @@ use crate::{
         renderer::Renderer,
     },
     texture,
+    vertex::TextureVertex,
 };
-use nalgebra::{
-    Point3,
-    Vector3,
-    Vector4,
-    point,
-    vector,
-};
+use nalgebra::Vector3;
 use rand::rngs::ThreadRng;
 use std::{
     sync::Arc,
@@ -118,18 +113,18 @@ impl State
         let (camera_bind_group, camera_bind_group_layout) =
             CameraUniform::create_camera_bind_group(&camera_buffer, &renderer);
 
-        let sphere_lights = &[
+        let sphere_lights = [
             SphereLight::new((00.0, 30.0, 0.0), (1.0, 1.0, 1.0, 1.0), 100.0),
             SphereLight::new((30.0, 30.0, 0.0), (1.0, 0.0, 0.0, 1.0), 100.0),
             SphereLight::new((60.0, 30.0, 0.0), (0.0, 1.0, 0.0, 1.0), 100.0),
             SphereLight::new((90.0, 30.0, 0.0), (0.0, 0.0, 1.0, 1.0), 100.0),
         ];
-        let sun_lights = &[
+        let sun_lights = [
             SunLight::new((8.0, -12.0, 3.0), (1.0, 0.8, 0.2, 1.0), 0.5),
             SunLight::new((-8.0, -12.0, -2.0), (0.2, 0.8, 1.0, 1.0), 0.2),
         ];
 
-        let light_uniform = LightUniform::new(sphere_lights, sun_lights);
+        let light_uniform = LightUniform::new(&sphere_lights, &sun_lights);
         let light_buffer = light_uniform.create_light_buffer(&renderer);
 
         let (light_bind_group, light_bind_group_layout) =
@@ -187,7 +182,7 @@ impl State
                     pipeline_id: 0,
                 },
                 GeometryGroup {
-                    meshes: vec![MeshBuffer::from_verts(&[], &[], &renderer)],
+                    meshes: vec![MeshBuffer::from_verts::<TextureVertex>(&[], &[], &renderer)],
                     pipeline_id: 1,
                 },
             ],
