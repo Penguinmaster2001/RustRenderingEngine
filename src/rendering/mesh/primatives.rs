@@ -1,6 +1,6 @@
 use crate::{
     rendering::mesh::MeshData,
-    vertex::TextureVertex,
+    vertex::ModelVertex,
 };
 use nalgebra::{
     Point3,
@@ -10,7 +10,7 @@ use std::f32::consts::PI;
 
 
 
-impl MeshData<TextureVertex>
+impl MeshData<ModelVertex>
 {
     pub fn new_uv_sphere<P: Into<Point3<f32>>>(
         radius: f32,
@@ -38,14 +38,15 @@ impl MeshData<TextureVertex>
                 let u = long as f32 / longs as f32;
                 let (x, z) = f32::sin_cos(u * PI * 2.0);
 
-                let vert = TextureVertex {
-                    position: (center + Vector3::new(x * radius * w, y * radius, z * radius * w))
-                        .into(),
+                let normal = Vector3::new(x * w, y, z * w);
+                let position = center + (radius * normal);
+                let vert = ModelVertex {
+                    position: position.into(),
                     tex_coords: [u, v],
+                    normal: normal.into(),
                 };
 
                 vertices.push(vert);
-                // normals.Add(vert.Normalized());
                 point += 1;
 
                 if lat > 0 && long > 0

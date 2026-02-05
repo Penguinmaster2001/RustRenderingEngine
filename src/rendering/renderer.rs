@@ -4,10 +4,6 @@ use crate::{
         render_pass_data::RenderData,
     },
     texture,
-    vertex::{
-        TextureVertex,
-        Vertex,
-    },
 };
 use std::sync::Arc;
 use wgpu;
@@ -105,22 +101,24 @@ impl Renderer
     }
 
 
-    pub fn create_render_pipeline(
+    pub fn create_render_pipeline<'a>(
         &self,
+        label: &str,
         layout: &wgpu::PipelineLayout,
+        buffers: &'a [wgpu::VertexBufferLayout<'a>],
         topology: wgpu::PrimitiveTopology,
         shader: &wgpu::ShaderModule,
     ) -> wgpu::RenderPipeline
     {
         self.device
             .create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-                label: Some("Line Render Pipeline"),
+                label: Some(label),
                 layout: Some(layout),
 
                 vertex: wgpu::VertexState {
                     module: shader,
                     entry_point: Some("vs_main"),
-                    buffers: &[TextureVertex::desc()],
+                    buffers,
                     compilation_options: wgpu::PipelineCompilationOptions::default(),
                 },
 
@@ -136,7 +134,6 @@ impl Renderer
                 }),
 
                 primitive: wgpu::PrimitiveState {
-                    // topology: wgpu::PrimitiveTopology::LineStrip,
                     topology,
                     strip_index_format: None,
                     front_face: wgpu::FrontFace::Ccw,

@@ -7,7 +7,7 @@ use crate::{
         },
         renderer::Renderer,
     },
-    vertex::TextureVertex,
+    vertex::ModelVertex,
 };
 
 
@@ -63,7 +63,7 @@ impl Default for CelestialMeshContainer
 
 
 
-impl MeshData<TextureVertex>
+impl MeshData<ModelVertex>
 {
     pub fn from_planet(planet: &Planet) -> Self
     {

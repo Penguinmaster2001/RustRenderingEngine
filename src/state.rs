@@ -34,7 +34,11 @@ use crate::{
         renderer::Renderer,
     },
     texture,
-    vertex::TextureVertex,
+    vertex::{
+        ModelVertex,
+        TextureVertex,
+        Vertex,
+    },
 };
 use nalgebra::Vector3;
 use rand::rngs::ThreadRng;
@@ -81,7 +85,7 @@ impl State
             State::create_diffuse_bind_group(&renderer, &texture_bind_group_layout);
 
         let [shader, line_shader] = renderer.create_shaders(&[
-            include_str!("shader.wgsl"),
+            include_str!("mesh_shader.wgsl"),
             include_str!("line_shader.wgsl"),
         ]);
 
@@ -150,12 +154,16 @@ impl State
         );
 
         let render_pipeline = renderer.create_render_pipeline(
+            "mesh_render_pipeline",
             &render_pipeline_layout,
+            &[ModelVertex::desc()],
             wgpu::PrimitiveTopology::TriangleList,
             &shader,
         );
         let line_render_pipeline = renderer.create_render_pipeline(
+            "line_render_pipeline",
             &render_pipeline_layout,
+            &[TextureVertex::desc()],
             wgpu::PrimitiveTopology::LineStrip,
             &line_shader,
         );

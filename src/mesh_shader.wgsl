@@ -56,6 +56,7 @@ var<uniform> lights: Lights;
 struct VertexInput {
     @location(0) position: vec3<f32>,
     @location(1) tex_coords: vec2<f32>,
+    @location(2) normal: vec3<f32>,
 }
 
 
@@ -64,6 +65,7 @@ struct VertexOutput {
     @builtin(position) clip_position: vec4<f32>,
     @location(0) world_position: vec3<f32>,
     @location(1) tex_coords: vec2<f32>,
+    @location(2) normal: vec3<f32>,
 }
 
 
@@ -78,6 +80,7 @@ fn vs_main(
     out.clip_position = camera.view_proj * world_position;
     out.world_position = world_position.xyz;
     out.tex_coords = model.tex_coords;
+    out.normal = model.normal;
     return out;
 }
 
@@ -86,11 +89,7 @@ fn vs_main(
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32>
 {
-    let dpdx = dpdx(in.world_position);
-    let dpdy = dpdy(in.world_position);
-    let normal = normalize(cross(dpdy, dpdx));
-    
-    // return vec4(normal, 1.0);
+    let normal = in.normal;
     
     let view_direction = normalize(camera.view_pos.xyz - in.world_position);
     
