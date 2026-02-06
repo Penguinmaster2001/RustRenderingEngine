@@ -33,6 +33,7 @@ use crate::{
         },
         renderer::Renderer,
     },
+    resources::load_model,
     texture,
     vertex::{
         ModelVertex,
@@ -89,7 +90,7 @@ impl State
             include_str!("line_shader.wgsl"),
         ]);
 
-        let space_ship = SpaceshipController::new(InputSettings {
+        let spaceship = SpaceshipController::new(InputSettings {
             sensitivity: 0.005,
             speed: 200.0,
         });
@@ -177,9 +178,19 @@ impl State
 
         let physics_sim = PhysicsSim::new(
             Duration::from_secs_f32(1.0 / 90.0),
-            space_ship,
+            spaceship,
             celestial_bodies.clone(),
         );
+
+        let spaceship_mesh = load_model(
+            "res/SpaceShip/simpleSpaceShip.obj",
+            &renderer.device,
+            &renderer.queue,
+        )
+        .await
+        .expect("Should be able to load model.")
+        .meshes
+        .remove(0);
 
         let render_data = RenderData::new(
             vec![diffuse_bind_group, camera_bind_group, light_bind_group],
@@ -192,6 +203,14 @@ impl State
                 GeometryGroup {
                     meshes: vec![MeshBuffer::from_verts::<TextureVertex>(&[], &[], &renderer)],
                     pipeline_id: 1,
+                },
+                GeometryGroup {
+                    meshes: vec![MeshBuffer {
+                        vertex_buffer: spaceship_mesh.vertex_buffer,
+                        index_buffer: spaceship_mesh.index_buffer,
+                        index_count: spaceship_mesh.num_elements,
+                    }],
+                    pipeline_id: 0,
                 },
             ],
             depth_texture,
