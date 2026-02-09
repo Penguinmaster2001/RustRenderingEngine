@@ -1,15 +1,14 @@
 use crate::{
-    rendering::{
-        lighting::{
-            SphereLight,
-            SunLight,
-        },
-        mesh::MeshBuffer,
+    model::Model,
+    rendering::lighting::{
+        SphereLight,
+        SunLight,
     },
     texture::Texture,
 };
 use wgpu::{
     BindGroup,
+    Buffer,
     RenderPipeline,
 };
 
@@ -25,7 +24,7 @@ pub struct LightingGroup
 
 pub struct GeometryGroup
 {
-    pub meshes: Vec<MeshBuffer>,
+    pub models: Vec<Model>,
     pub pipeline_id: usize,
 }
 
@@ -33,6 +32,8 @@ pub struct GeometryGroup
 
 pub struct RenderData
 {
+    pub camera_buffer: Buffer,
+    pub transform_buffer: Buffer,
     pub bind_groups: Vec<BindGroup>,
     pub pipelines: Vec<RenderPipeline>,
     pub geometries: Vec<GeometryGroup>,
@@ -44,6 +45,8 @@ pub struct RenderData
 impl RenderData
 {
     pub fn new(
+        camera_buffer: Buffer,
+        transform_buffer: Buffer,
         bind_groups: Vec<BindGroup>,
         pipelines: Vec<RenderPipeline>,
         geometries: Vec<GeometryGroup>,
@@ -51,6 +54,8 @@ impl RenderData
     ) -> Self
     {
         Self {
+            camera_buffer,
+            transform_buffer,
             bind_groups,
             pipelines,
             geometries,

@@ -1,5 +1,6 @@
 use crate::{
     celestial_bodies::planet::Planet,
+    model::Model,
     rendering::{
         mesh::{
             MeshBuffer,
@@ -14,7 +15,7 @@ use crate::{
 
 pub struct CelestialMeshContainer
 {
-    pub meshes: Vec<MeshBuffer>,
+    pub models: Vec<Model>,
 }
 
 
@@ -23,16 +24,16 @@ impl CelestialMeshContainer
 {
     pub fn new() -> Self
     {
-        Self { meshes: vec![] }
+        Self { models: vec![] }
     }
 
 
 
-    pub fn add_mesh(&mut self, mesh: MeshBuffer) -> usize
+    pub fn add_model(&mut self, model: Model) -> usize
     {
-        let id = self.meshes.len();
+        let id = self.models.len();
 
-        self.meshes.push(mesh);
+        self.models.push(model);
 
         id
     }
@@ -43,9 +44,10 @@ impl CelestialMeshContainer
     {
         for planet in planets
         {
-            self.add_mesh(MeshBuffer::from_data(
-                &MeshData::from_planet(planet),
-                render_state,
+            let planet_mesh = MeshBuffer::from_data(&MeshData::from_planet(planet), render_state);
+            self.add_model(Model::new(
+                vec![planet_mesh],
+                planet.physics_state.get_transform(),
             ));
         }
     }
@@ -67,6 +69,6 @@ impl MeshData<ModelVertex>
 {
     pub fn from_planet(planet: &Planet) -> Self
     {
-        MeshData::new_uv_sphere(planet.radius, *planet.physics_state.get_pos(), 64, 32)
+        MeshData::new_uv_sphere(planet.radius, [0.0, 0.0, 0.0], 64, 32)
     }
 }

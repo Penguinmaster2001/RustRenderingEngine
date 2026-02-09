@@ -30,6 +30,33 @@ pub struct MeshBuffer
 
 impl MeshBuffer
 {
+    pub fn new(renderer: &Renderer) -> Self
+    {
+        let vertex_buffer = renderer
+            .device
+            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: None,
+                contents: &[],
+                usage: wgpu::BufferUsages::VERTEX,
+            });
+
+        let index_buffer = renderer
+            .device
+            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: None,
+                contents: &[],
+                usage: wgpu::BufferUsages::INDEX,
+            });
+
+        Self {
+            vertex_buffer,
+            index_buffer,
+            index_count: 0,
+        }
+    }
+
+
+
     pub fn from_verts<V: Vertex + bytemuck::NoUninit>(
         vertices: &[V],
         indices: &[u32],
@@ -39,7 +66,7 @@ impl MeshBuffer
         let vertex_buffer = renderer
             .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("chunk Vertex Buffer"),
+                label: None,
                 contents: bytemuck::cast_slice(vertices),
                 usage: wgpu::BufferUsages::VERTEX,
             });
@@ -47,7 +74,7 @@ impl MeshBuffer
         let index_buffer = renderer
             .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("chunk Index Buffer"),
+                label: None,
                 contents: bytemuck::cast_slice(indices),
                 usage: wgpu::BufferUsages::INDEX,
             });

@@ -32,6 +32,13 @@ struct Lights
 
 
 
+struct ModelUniform
+{
+    model: mat4x4<f32>,
+};
+
+
+
 @group(0) @binding(0)
 var t_diffuse: texture_2d<f32>;
 @group(0) @binding(1)
@@ -50,6 +57,11 @@ var<uniform> camera: CameraUniform;
 
 @group(2) @binding(0)
 var<uniform> lights: Lights;
+
+
+
+@group(3) @binding(0)
+var<uniform> model: ModelUniform;
 
 
 

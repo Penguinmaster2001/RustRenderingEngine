@@ -223,15 +223,22 @@ impl Renderer
                 render_pass.set_bind_group(index as u32, bind_group, &[]);
             }
 
-            // data.geometries.sort_by_key(|g| g.pipeline_id);
             for c in data
                 .geometries
                 .chunk_by(|g1, g2| g1.pipeline_id == g2.pipeline_id)
             {
                 render_pass.set_pipeline(&data.pipelines[c[0].pipeline_id]);
-                for mesh in c.iter().map(|g| &g.meshes)
+                for model_vec in c.iter().map(|g| &g.models)
                 {
-                    render_pass.draw_meshes(mesh.iter());
+                    for model in model_vec
+                    {
+                        self.queue.write_buffer(
+                            &data.transform_buffer,
+                            0,
+                            bytemuck::cast_slice(&[model.transform]),
+                        );
+                        render_pass.draw_meshes(model.meshes.iter());
+                    }
                 }
             }
         }
@@ -246,10 +253,12 @@ impl Renderer
 
     pub fn create_shaders<const N: usize>(&self, files: &[&str; N]) -> [wgpu::ShaderModule; N]
     {
+        let mut n = -1;
         files.map(|f| {
+            n += 1;
             self.device
                 .create_shader_module(wgpu::ShaderModuleDescriptor {
-                    label: Some("Shader"),
+                    label: Some(format!("shader_{}", n).as_str()),
                     source: wgpu::ShaderSource::Wgsl(f.into()),
                 })
         })

@@ -1,8 +1,11 @@
 use nalgebra::{
     Point3,
     Quaternion,
+    RealField,
     Scalar,
     SimdRealField,
+    Transform3,
+    Translation3,
     Vector3,
 };
 
@@ -45,7 +48,7 @@ impl<S: Scalar> PhysicsBodyState<S>
 
 
 
-impl<S: SimdRealField> PhysicsBodyState<S>
+impl<S: SimdRealField + RealField> PhysicsBodyState<S>
 {
     pub fn new() -> Self
     {
@@ -72,11 +75,18 @@ impl<S: SimdRealField> PhysicsBodyState<S>
     {
         self.acceleration += acceleration.into();
     }
+
+
+
+    pub fn get_transform(&self) -> Transform3<S>
+    {
+        Translation3::from(self.position.clone()) * Transform3::identity()
+    }
 }
 
 
 
-impl<S: SimdRealField> Default for PhysicsBodyState<S>
+impl<S: SimdRealField + RealField> Default for PhysicsBodyState<S>
 {
     fn default() -> Self
     {

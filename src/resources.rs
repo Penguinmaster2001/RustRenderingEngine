@@ -2,6 +2,11 @@ use crate::{
     model::{
         self,
         Material,
+        TransformUniform,
+    },
+    rendering::{
+        mesh::MeshBuffer,
+        renderer::Renderer,
     },
     texture,
     vertex::ModelVertex,
@@ -57,8 +62,7 @@ pub async fn load_texture(
 
 pub async fn load_model(
     path: &str,
-    device: &wgpu::Device,
-    queue: &wgpu::Queue,
+    renderer: &Renderer,
     // layout: &wgpu::BindGroupLayout,
 ) -> anyhow::Result<model::Model>
 {
@@ -70,7 +74,7 @@ pub async fn load_model(
     let obj_cursor = Cursor::new(obj_text);
     let mut obj_reader = BufReader::new(obj_cursor);
 
-    let (models, obj_materials) = tobj::load_obj_buf_async(
+    let (models, _obj_materials) = tobj::load_obj_buf_async(
         &mut obj_reader,
         &tobj::LoadOptions {
             triangulate: true,
@@ -85,7 +89,7 @@ pub async fn load_model(
     )
     .await?;
 
-    let mut materials: Vec<Material> = Vec::new();
+    let mut _materials: Vec<Material> = Vec::new();
     // for m in obj_materials?
     // {
     //     let diffuse_texture = load_texture(&base.join(m.diffuse_texture), device, queue).await?;
@@ -153,29 +157,41 @@ pub async fn load_model(
                 })
                 .collect::<Vec<_>>();
 
-            let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some(&format!("{:?} Vertex Buffer", file_name)),
-                contents: bytemuck::cast_slice(&vertices),
-                usage: wgpu::BufferUsages::VERTEX,
-            });
-            let index_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some(&format!("{:?} Index Buffer", file_name)),
-                contents: bytemuck::cast_slice(&m.mesh.indices),
-                usage: wgpu::BufferUsages::INDEX,
-            });
+            let vertex_buffer =
+                renderer
+                    .device
+                    .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                        label: Some(&format!("{:?} Vertex Buffer", file_name)),
+                        contents: bytemuck::cast_slice(&vertices),
+                        usage: wgpu::BufferUsages::VERTEX,
+                    });
+            let index_buffer =
+                renderer
+                    .device
+                    .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                        label: Some(&format!("{:?} Index Buffer", file_name)),
+                        contents: bytemuck::cast_slice(&m.mesh.indices),
+                        usage: wgpu::BufferUsages::INDEX,
+                    });
 
-            model::Mesh {
-                name: file_name.to_str().unwrap().to_owned(),
+            // model::ModelMesh {
+            //     name: file_name.to_str().unwrap().to_owned(),
+            //     vertex_buffer,
+            //     index_buffer,
+            //     num_elements: m.mesh.indices.len() as u32,
+            //     material: m.mesh.material_id.unwrap_or(0),
+            // }
+
+            MeshBuffer {
                 vertex_buffer,
                 index_buffer,
-                num_elements: m.mesh.indices.len() as u32,
-                material: m.mesh.material_id.unwrap_or(0),
+                index_count: m.mesh.indices.len() as u32,
             }
         })
         .collect::<Vec<_>>();
 
     Ok(model::Model {
         meshes,
-        materials: vec![],
+        transform: TransformUniform::new(),
     })
 }

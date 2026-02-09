@@ -1,12 +1,148 @@
-use crate::texture;
+use crate::{
+    rendering::{
+        mesh::MeshBuffer,
+        renderer::Renderer,
+    },
+    texture,
+};
+use nalgebra::Transform3;
 use std::ops::Range;
+use wgpu::{
+    Buffer,
+    util::DeviceExt,
+};
 
 
 
+#[repr(C)]
+#[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
+pub struct TransformUniform
+{
+    transform: [[f32; 4]; 4],
+}
+
+
+
+impl TransformUniform
+{
+    pub fn new() -> Self
+    {
+        Self {
+            transform: [
+                [1.0, 0.0, 0.0, 0.0],
+                [0.0, 1.0, 0.0, 0.0],
+                [0.0, 0.0, 1.0, 0.0],
+                [0.0, 0.0, 0.0, 1.0],
+            ],
+        }
+    }
+
+
+
+    pub fn create_buffer(&self, renderer: &Renderer) -> Buffer
+    {
+        renderer
+            .device
+            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("transform_buffer"),
+                contents: bytemuck::cast_slice(&[*self]),
+                usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            })
+    }
+
+
+
+    pub fn create_empty_buffer(renderer: &Renderer) -> Buffer
+    {
+        renderer
+            .device
+            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("transform_buffer"),
+                contents: bytemuck::cast_slice(&[TransformUniform::default()]),
+                usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            })
+    }
+
+
+
+    pub fn create_bind_group(
+        transform_buffer: &Buffer,
+        renderer: &Renderer,
+    ) -> (wgpu::BindGroup, wgpu::BindGroupLayout)
+    {
+        let layout = renderer
+            .device
+            .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                label: Some("transform_bind_group_layout"),
+                entries: &[wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::VERTEX,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Uniform,
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                }],
+            });
+
+        let bind_group = renderer
+            .device
+            .create_bind_group(&wgpu::BindGroupDescriptor {
+                layout: &layout,
+                entries: &[wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: transform_buffer.as_entire_binding(),
+                }],
+                label: Some("transform_bind_group"),
+            });
+
+        (bind_group, layout)
+    }
+}
+
+
+
+impl Default for TransformUniform
+{
+    fn default() -> Self
+    {
+        Self::new()
+    }
+}
+
+
+
+impl From<Transform3<f32>> for TransformUniform
+{
+    fn from(value: Transform3<f32>) -> Self
+    {
+        Self {
+            transform: *value.into_inner().as_mut(),
+        }
+    }
+}
+
+
+
+#[derive(Default)]
 pub struct Model
 {
-    pub meshes: Vec<Mesh>,
-    pub materials: Vec<Material>,
+    pub meshes: Vec<MeshBuffer>,
+    pub transform: TransformUniform,
+}
+
+
+
+impl Model
+{
+    pub fn new<T: Into<TransformUniform>>(meshes: Vec<MeshBuffer>, transform: T) -> Self
+    {
+        Self {
+            meshes,
+            transform: transform.into(),
+        }
+    }
 }
 
 
@@ -20,7 +156,7 @@ pub struct Material
 
 
 
-pub struct Mesh
+pub struct ModelMesh
 {
     pub name: String,
     pub vertex_buffer: wgpu::Buffer,
@@ -35,13 +171,13 @@ pub trait DrawModel<'a>
 {
     fn draw_mesh(
         &mut self,
-        mesh: &'a Mesh,
+        mesh: &'a ModelMesh,
         material: &'a Material,
         camera_bind_group: &'a wgpu::BindGroup,
     );
     fn draw_mesh_instanced(
         &mut self,
-        mesh: &'a Mesh,
+        mesh: &'a ModelMesh,
         material: &'a Material,
         instances: Range<u32>,
         camera_bind_group: &'a wgpu::BindGroup,
@@ -56,7 +192,7 @@ where
 {
     fn draw_mesh(
         &mut self,
-        mesh: &'b Mesh,
+        mesh: &'b ModelMesh,
         material: &'b Material,
         camera_bind_group: &'b wgpu::BindGroup,
     )
@@ -68,7 +204,7 @@ where
 
     fn draw_mesh_instanced(
         &mut self,
-        mesh: &'b Mesh,
+        mesh: &'b ModelMesh,
         material: &'b Material,
         instances: Range<u32>,
         camera_bind_group: &'b wgpu::BindGroup,

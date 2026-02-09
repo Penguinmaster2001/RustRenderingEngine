@@ -9,6 +9,10 @@ use crate::{
         input_settings::InputSettings,
     },
     math,
+    model::{
+        Model,
+        TransformUniform,
+    },
     physics::{
         physics_sim::PhysicsSim,
         trajectory::calculate_trajectory,
@@ -63,7 +67,6 @@ pub struct State
 {
     projection: camera::Projection,
     camera_uniform: camera::CameraUniform,
-    camera_buffer: wgpu::Buffer,
     render_data: RenderData,
     physics_sim: PhysicsSim,
     camera_controller: CameraController<OrbitCamera>,
@@ -135,6 +138,10 @@ impl State
         let (light_bind_group, light_bind_group_layout) =
             LightUniform::create_light_bind_group(&light_buffer, &renderer);
 
+        let transform_buffer = TransformUniform::create_empty_buffer(&renderer);
+        let (transform_bind_group, transform_bind_group_layout) =
+            TransformUniform::create_bind_group(&transform_buffer, &renderer);
+
         let render_pipeline_layout =
             renderer
                 .device
@@ -144,6 +151,7 @@ impl State
                         &texture_bind_group_layout,
                         &camera_bind_group_layout,
                         &light_bind_group_layout,
+                        &transform_bind_group_layout,
                     ],
                     push_constant_ranges: &[],
                 });
@@ -182,34 +190,34 @@ impl State
             celestial_bodies.clone(),
         );
 
-        let spaceship_mesh = load_model(
-            "res/SpaceShip/simpleSpaceShip.obj",
-            &renderer.device,
-            &renderer.queue,
-        )
-        .await
-        .expect("Should be able to load model.")
-        .meshes
-        .remove(0);
+        let spaceship_model = load_model("res/SpaceShip/simpleSpaceShip.obj", &renderer)
+            .await
+            .expect("Should be able to load model.");
 
         let render_data = RenderData::new(
-            vec![diffuse_bind_group, camera_bind_group, light_bind_group],
+            camera_buffer,
+            transform_buffer,
+            vec![
+                diffuse_bind_group,
+                camera_bind_group,
+                light_bind_group,
+                transform_bind_group,
+            ],
             vec![render_pipeline, line_render_pipeline],
             vec![
                 GeometryGroup {
-                    meshes: celestial_meshes.meshes,
+                    models: celestial_meshes.models,
                     pipeline_id: 0,
                 },
                 GeometryGroup {
-                    meshes: vec![MeshBuffer::from_verts::<TextureVertex>(&[], &[], &renderer)],
+                    models: vec![Model {
+                        meshes: vec![MeshBuffer::new(&renderer)],
+                        transform: TransformUniform::new(),
+                    }],
                     pipeline_id: 1,
                 },
                 GeometryGroup {
-                    meshes: vec![MeshBuffer {
-                        vertex_buffer: spaceship_mesh.vertex_buffer,
-                        index_buffer: spaceship_mesh.index_buffer,
-                        index_count: spaceship_mesh.num_elements,
-                    }],
+                    models: vec![spaceship_model],
                     pipeline_id: 0,
                 },
             ],
@@ -223,7 +231,6 @@ impl State
             renderer,
             projection,
             camera_uniform,
-            camera_buffer,
             render_data,
         })
     }
@@ -357,7 +364,7 @@ impl State
             self.camera_uniform
                 .update_view_proj(&self.camera_controller, &self.projection);
 
-            self.render_data.geometries[1].meshes[0] = calculate_trajectory(
+            self.render_data.geometries[1].models[0].meshes[0] = calculate_trajectory(
                 self.physics_sim.dt.as_secs_f32(),
                 200 * 60 * 10,
                 &player.body,
@@ -366,7 +373,7 @@ impl State
             );
         }
         self.renderer.queue.write_buffer(
-            &self.camera_buffer,
+            &self.render_data.camera_buffer,
             0,
             bytemuck::cast_slice(&[self.camera_uniform]),
         );
