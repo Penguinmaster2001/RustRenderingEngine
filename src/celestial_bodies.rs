@@ -40,7 +40,7 @@ impl CelestialBodyContainer
         {
             let mass = rng.random_range(0.5 * ave_mass..2.0 * ave_mass);
             let mut planet = Planet {
-                radius: 1.0 * mass.powf(1.0 / 3.0),
+                radius: 10.0 * mass.powf(1.0 / 3.0),
                 mass,
                 physics_state: PhysicsBodyState::new(),
             };

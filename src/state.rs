@@ -48,10 +48,7 @@ use crate::{
         Vertex,
     },
 };
-use nalgebra::{
-    Transform3,
-    Vector3,
-};
+use nalgebra::Vector3;
 use rand::rngs::ThreadRng;
 use std::{
     sync::Arc,
@@ -145,7 +142,7 @@ impl State
         let (light_bind_group, light_bind_group_layout) =
             LightUniform::create_light_bind_group(&light_buffer, &renderer);
 
-        let transform_buffer = TransformUniform::create_empty_buffer(&renderer);
+        let transform_buffer = TransformUniform::create_buffer(&renderer);
         let (transform_bind_group, transform_bind_group_layout) =
             TransformUniform::create_bind_group(&transform_buffer, &renderer);
 
@@ -186,7 +183,7 @@ impl State
 
         let mut rng = ThreadRng::default();
         let mut celestial_bodies = CelestialBodyContainer::new();
-        celestial_bodies.generate_planets(3, 1_000_000.0, 50_000.0, &mut rng);
+        celestial_bodies.generate_planets(3, 10_000.0, 5_000.0, &mut rng);
 
         let mut celestial_meshes = CelestialMeshContainer::new();
         celestial_meshes.add_planets(&celestial_bodies.bodies, &renderer);
@@ -223,14 +220,7 @@ impl State
                             MeshBuffer::new(&renderer),
                             MeshBuffer::new(&renderer),
                         ],
-                        transform: TransformUniform {
-                            transform: [
-                                [1.0, 0.0, 0.0, 1000.0],
-                                [0.0, 10000.0, 0.0, 1000.0],
-                                [0.0, 0.0, 1.0, 1000.0],
-                                [0.0, 0.0, 0.0, 1.0],
-                            ],
-                        },
+                        transform: TransformUniform::new(),
                     }],
                     pipeline_id: 1,
                 },
@@ -385,7 +375,7 @@ impl State
 
             if self.frame_num.is_multiple_of(3200)
             {
-                let t_scale = 8.0;
+                let t_scale = 4.0;
                 let steps = 1600 * 60 * 10;
                 self.render_data.geometries[1].models[0].meshes[0] = calculate_trajectory(
                     self.physics_sim.dt.as_secs_f32(),

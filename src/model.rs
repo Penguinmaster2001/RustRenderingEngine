@@ -7,10 +7,7 @@ use crate::{
 };
 use nalgebra::Transform3;
 use std::ops::Range;
-use wgpu::{
-    Buffer,
-    util::DeviceExt,
-};
+use wgpu::Buffer;
 
 
 
@@ -39,28 +36,29 @@ impl TransformUniform
 
 
 
-    pub fn create_buffer(&self, renderer: &Renderer) -> Buffer
+    pub fn padded_uniform_size(renderer: &Renderer) -> u64
     {
-        renderer
-            .device
-            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("transform_buffer"),
-                contents: bytemuck::cast_slice(&[*self]),
-                usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-            })
+        let uniform_size = std::mem::size_of::<TransformUniform>() as wgpu::BufferAddress;
+        let min_alignment: u64 = renderer.device.limits().min_uniform_buffer_offset_alignment as _;
+        (uniform_size + min_alignment - 1) & !(min_alignment - 1) // ceil to alignment
     }
 
 
 
-    pub fn create_empty_buffer(renderer: &Renderer) -> Buffer
+    pub fn create_buffer(renderer: &Renderer) -> Buffer
     {
-        renderer
-            .device
-            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("transform_buffer"),
-                contents: bytemuck::cast_slice(&[TransformUniform::default()]),
-                usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-            })
+        let max_models_per_frame = 64;
+        let uniform_size = std::mem::size_of::<TransformUniform>() as wgpu::BufferAddress;
+        let min_alignment: u64 = renderer.device.limits().min_uniform_buffer_offset_alignment as _;
+        let padded_uniform_size = (uniform_size + min_alignment - 1) & !(min_alignment - 1); // ceil to alignment
+
+        let buffer_size = max_models_per_frame * padded_uniform_size;
+        renderer.device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("transforms_array_buffer"),
+            size: buffer_size,
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        })
     }
 
 
@@ -70,6 +68,8 @@ impl TransformUniform
         renderer: &Renderer,
     ) -> (wgpu::BindGroup, wgpu::BindGroupLayout)
     {
+        let size = wgpu::BufferSize::new(TransformUniform::padded_uniform_size(renderer));
+
         let layout = renderer
             .device
             .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
@@ -79,8 +79,8 @@ impl TransformUniform
                     visibility: wgpu::ShaderStages::VERTEX,
                     ty: wgpu::BindingType::Buffer {
                         ty: wgpu::BufferBindingType::Uniform,
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
+                        has_dynamic_offset: true,
+                        min_binding_size: size,
                     },
                     count: None,
                 }],
@@ -92,7 +92,11 @@ impl TransformUniform
                 layout: &layout,
                 entries: &[wgpu::BindGroupEntry {
                     binding: 0,
-                    resource: transform_buffer.as_entire_binding(),
+                    resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
+                        buffer: transform_buffer,
+                        offset: 0,
+                        size,
+                    }),
                 }],
                 label: Some("transform_bind_group"),
             });
@@ -138,12 +142,9 @@ impl Model
 {
     pub fn new<T: Into<TransformUniform>>(meshes: Vec<MeshBuffer>, transform: T) -> Self
     {
-        let t = transform.into();
-        println!("{:?}", t);
-
         Self {
             meshes,
-            transform: t,
+            transform: transform.into(),
         }
     }
 }

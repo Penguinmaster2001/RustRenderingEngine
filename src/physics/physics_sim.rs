@@ -103,7 +103,7 @@ impl<F: ForceField> PhysicsThread<F>
 
     pub fn run(&mut self)
     {
-        let mut scale = 4u32.pow(3);
+        let mut scale = 4u32.pow(0);
         loop
         {
             let now = Instant::now();

@@ -221,9 +221,42 @@ impl Renderer
 
             for (index, bind_group) in data.bind_groups.iter().enumerate()
             {
+                if index == 3
+                {
+                    continue;
+                }
                 render_pass.set_bind_group(index as u32, bind_group, &[]);
             }
 
+            let padded_uniform_size = TransformUniform::padded_uniform_size(self);
+
+            let mut transform_uniforms = Vec::with_capacity(64);
+            for c in data
+                .geometries
+                .chunk_by(|g1, g2| g1.pipeline_id == g2.pipeline_id)
+            {
+                for model_vec in c
+                {
+                    for model in &model_vec.models
+                    {
+                        transform_uniforms.push(model.transform);
+                    }
+                }
+            }
+
+            self.queue.write_buffer(
+                &data.transform_buffer,
+                0,
+                bytemuck::cast_slice(
+                    transform_uniforms
+                        .iter()
+                        .map(|t| [*t; 4])
+                        .collect::<Vec<[TransformUniform; 4]>>()
+                        .as_slice(),
+                ),
+            );
+
+            let mut model_index = 0;
             for c in data
                 .geometries
                 .chunk_by(|g1, g2| g1.pipeline_id == g2.pipeline_id)
@@ -233,28 +266,16 @@ impl Renderer
                 {
                     for model in &model_vec.models
                     {
-                        self.queue.write_buffer(
-                            &data.transform_buffer,
-                            0,
-                            bytemuck::cast_slice(&[model.transform]),
-                        );
+                        let offset_bytes = model_index * padded_uniform_size;
+                        render_pass.set_bind_group(3, &data.bind_groups[3], &[offset_bytes as u32]);
                         render_pass.draw_meshes(model.meshes.iter());
+
+                        // println!("{offset_bytes}\t{:?}", model.transform);
+                        model_index += 1;
                     }
                 }
             }
         }
-        self.queue.write_buffer(
-            &data.transform_buffer,
-            0,
-            bytemuck::cast_slice(&[TransformUniform {
-                transform: [
-                    [1.0, 0.0, 0.0, 1000.0],
-                    [0.0, 10000.0, 0.0, 1000.0],
-                    [0.0, 0.0, 1.0, 1000.0],
-                    [0.0, 0.0, 0.0, 1.0],
-                ],
-            }]),
-        );
 
         self.queue.submit(std::iter::once(encoder.finish()));
         output.present();
