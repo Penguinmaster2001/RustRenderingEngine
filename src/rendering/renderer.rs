@@ -1,4 +1,5 @@
 use crate::{
+    model::TransformUniform,
     rendering::{
         mesh_renderer::DrawMeshes,
         render_pass_data::RenderData,
@@ -228,9 +229,9 @@ impl Renderer
                 .chunk_by(|g1, g2| g1.pipeline_id == g2.pipeline_id)
             {
                 render_pass.set_pipeline(&data.pipelines[c[0].pipeline_id]);
-                for model_vec in c.iter().map(|g| &g.models)
+                for model_vec in c
                 {
-                    for model in model_vec
+                    for model in &model_vec.models
                     {
                         self.queue.write_buffer(
                             &data.transform_buffer,
@@ -242,6 +243,18 @@ impl Renderer
                 }
             }
         }
+        self.queue.write_buffer(
+            &data.transform_buffer,
+            0,
+            bytemuck::cast_slice(&[TransformUniform {
+                transform: [
+                    [1.0, 0.0, 0.0, 1000.0],
+                    [0.0, 10000.0, 0.0, 1000.0],
+                    [0.0, 0.0, 1.0, 1000.0],
+                    [0.0, 0.0, 0.0, 1.0],
+                ],
+            }]),
+        );
 
         self.queue.submit(std::iter::once(encoder.finish()));
         output.present();

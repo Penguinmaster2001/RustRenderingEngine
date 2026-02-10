@@ -32,13 +32,6 @@ struct Lights
 
 
 
-struct ModelUniform
-{
-    model: mat4x4<f32>,
-};
-
-
-
 @group(0) @binding(0)
 var t_diffuse: texture_2d<f32>;
 @group(0) @binding(1)
@@ -61,7 +54,7 @@ var<uniform> lights: Lights;
 
 
 @group(3) @binding(0)
-var<uniform> model: ModelUniform;
+var<uniform> model_transform: mat4x4<f32>;
 
 
 
@@ -88,7 +81,7 @@ fn vs_main(
 ) -> VertexOutput {
     var out: VertexOutput;
     
-    let world_position = vec4<f32>(model.position, 1.0);
+    let world_position = model_transform * vec4<f32>(model.position, 1.0);
     out.clip_position = camera.view_proj * world_position;
     out.world_position = world_position.xyz;
     out.tex_coords = model.tex_coords;

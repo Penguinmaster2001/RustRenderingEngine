@@ -32,13 +32,6 @@ struct Lights
 
 
 
-struct ModelTransformUniform
-{
-    transform: mat4x4<f32>,
-};
-
-
-
 @group(0) @binding(0)
 var t_diffuse: texture_2d<f32>;
 @group(0) @binding(1)
@@ -61,7 +54,7 @@ var<uniform> lights: Lights;
 
 
 @group(3) @binding(0)
-var<uniform> model_transform: ModelTransformUniform;
+var<uniform> model_transform: mat4x4<f32>;
 
 
 
@@ -86,7 +79,7 @@ fn vs_main(
 ) -> VertexOutput {
     var out: VertexOutput;
     
-    let world_position = model_transform.transform * vec4<f32>(model.position, 1.0);
+    let world_position = model_transform * vec4<f32>(model.position, 1.0);
     out.clip_position = camera.view_proj * world_position;
     out.world_position = world_position.xyz;
     out.tex_coords = model.tex_coords;
@@ -98,5 +91,15 @@ fn vs_main(
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32>
 {
-    return vec4(0.5, in.tex_coords.x, 0.8, 1.0);
+    var color = vec3(1.0, 0.1, 0.1);
+    if (in.tex_coords.y > 0.1)
+    {
+        color = vec3(0.1, 1.0, 0.1);
+    }
+    if (in.tex_coords.y > 0.6)
+    {
+        color = vec3(0.1, 0.1, 1.0);
+    }
+    color *= mix(4.0, 0.1, pow(1.0 - in.tex_coords.x, 5.0));
+    return vec4(color, 1.0);
 }

@@ -15,7 +15,10 @@ use crate::{
     },
     physics::{
         physics_sim::PhysicsSim,
-        trajectory::calculate_trajectory,
+        trajectory::{
+            calculate_trajectory,
+            calculate_trajectory_leapfrog,
+        },
     },
     player::spaceship_controller::SpaceshipController,
     rendering::{
@@ -45,7 +48,10 @@ use crate::{
         Vertex,
     },
 };
-use nalgebra::Vector3;
+use nalgebra::{
+    Transform3,
+    Vector3,
+};
 use rand::rngs::ThreadRng;
 use std::{
     sync::Arc,
@@ -65,6 +71,7 @@ use winit::{
 
 pub struct State
 {
+    frame_num: u32,
     projection: camera::Projection,
     camera_uniform: camera::CameraUniform,
     render_data: RenderData,
@@ -185,7 +192,7 @@ impl State
         celestial_meshes.add_planets(&celestial_bodies.bodies, &renderer);
 
         let physics_sim = PhysicsSim::new(
-            Duration::from_secs_f32(1.0 / 90.0),
+            Duration::from_secs_f32(1.0 / 180.0),
             spaceship,
             celestial_bodies.clone(),
         );
@@ -211,8 +218,19 @@ impl State
                 },
                 GeometryGroup {
                     models: vec![Model {
-                        meshes: vec![MeshBuffer::new(&renderer)],
-                        transform: TransformUniform::new(),
+                        meshes: vec![
+                            MeshBuffer::new(&renderer),
+                            MeshBuffer::new(&renderer),
+                            MeshBuffer::new(&renderer),
+                        ],
+                        transform: TransformUniform {
+                            transform: [
+                                [1.0, 0.0, 0.0, 1000.0],
+                                [0.0, 10000.0, 0.0, 1000.0],
+                                [0.0, 0.0, 1.0, 1000.0],
+                                [0.0, 0.0, 0.0, 1.0],
+                            ],
+                        },
                     }],
                     pipeline_id: 1,
                 },
@@ -225,6 +243,7 @@ impl State
         );
 
         Ok(Self {
+            frame_num: 0,
             camera_controller,
             celestial_bodies,
             physics_sim,
@@ -364,13 +383,35 @@ impl State
             self.camera_uniform
                 .update_view_proj(&self.camera_controller, &self.projection);
 
-            self.render_data.geometries[1].models[0].meshes[0] = calculate_trajectory(
-                self.physics_sim.dt.as_secs_f32(),
-                200 * 60 * 10,
-                &player.body,
-                &self.celestial_bodies,
-                &self.renderer,
-            );
+            if self.frame_num.is_multiple_of(3200)
+            {
+                let t_scale = 8.0;
+                let steps = 1600 * 60 * 10;
+                self.render_data.geometries[1].models[0].meshes[0] = calculate_trajectory(
+                    self.physics_sim.dt.as_secs_f32(),
+                    steps,
+                    &player.body,
+                    &self.celestial_bodies,
+                    &self.renderer,
+                    0.0,
+                );
+                self.render_data.geometries[1].models[0].meshes[1] = calculate_trajectory(
+                    t_scale * self.physics_sim.dt.as_secs_f32(),
+                    (steps as f32 / t_scale) as _,
+                    &player.body,
+                    &self.celestial_bodies,
+                    &self.renderer,
+                    0.5,
+                );
+                self.render_data.geometries[1].models[0].meshes[2] = calculate_trajectory_leapfrog(
+                    t_scale * self.physics_sim.dt.as_secs_f32(),
+                    (steps as f32 / t_scale) as _,
+                    &player.body,
+                    &self.celestial_bodies,
+                    &self.renderer,
+                    1.0,
+                );
+            }
         }
         self.renderer.queue.write_buffer(
             &self.render_data.camera_buffer,
@@ -378,6 +419,7 @@ impl State
             bytemuck::cast_slice(&[self.camera_uniform]),
         );
 
+        self.frame_num += 1;
         self.renderer.render(&self.render_data)
     }
 

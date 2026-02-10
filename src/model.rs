@@ -15,10 +15,10 @@ use wgpu::{
 
 
 #[repr(C)]
-#[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
+#[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable, Debug)]
 pub struct TransformUniform
 {
-    transform: [[f32; 4]; 4],
+    pub transform: [[f32; 4]; 4],
 }
 
 
@@ -138,9 +138,12 @@ impl Model
 {
     pub fn new<T: Into<TransformUniform>>(meshes: Vec<MeshBuffer>, transform: T) -> Self
     {
+        let t = transform.into();
+        println!("{:?}", t);
+
         Self {
             meshes,
-            transform: transform.into(),
+            transform: t,
         }
     }
 }
