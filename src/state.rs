@@ -48,7 +48,10 @@ use crate::{
         Vertex,
     },
 };
-use nalgebra::Vector3;
+use nalgebra::{
+    Rotation3,
+    Vector3,
+};
 use rand::rngs::ThreadRng;
 use std::{
     sync::Arc,
@@ -183,7 +186,7 @@ impl State
 
         let mut rng = ThreadRng::default();
         let mut celestial_bodies = CelestialBodyContainer::new();
-        celestial_bodies.generate_planets(3, 10_000.0, 5_000.0, &mut rng);
+        celestial_bodies.generate_planets(20, 1_000.0, 10_000.0, &mut rng);
 
         let mut celestial_meshes = CelestialMeshContainer::new();
         celestial_meshes.add_planets(&celestial_bodies.bodies, &renderer);
@@ -373,9 +376,17 @@ impl State
             self.camera_uniform
                 .update_view_proj(&self.camera_controller, &self.projection);
 
-            if self.frame_num.is_multiple_of(3200)
+            self.render_data.geometries[2].models[0].transform =
+                (player.body.state.get_transform()
+                    * Rotation3::face_towards(
+                        &self.camera_controller.camera.forward,
+                        &Vector3::y_axis().into_inner(),
+                    ))
+                .into();
+
+            if self.frame_num.is_multiple_of(1200)
             {
-                let t_scale = 4.0;
+                let t_scale = 2.0;
                 let steps = 1600 * 60 * 10;
                 self.render_data.geometries[1].models[0].meshes[0] = calculate_trajectory(
                     self.physics_sim.dt.as_secs_f32(),
@@ -385,22 +396,26 @@ impl State
                     &self.renderer,
                     0.0,
                 );
-                self.render_data.geometries[1].models[0].meshes[1] = calculate_trajectory(
-                    t_scale * self.physics_sim.dt.as_secs_f32(),
-                    (steps as f32 / t_scale) as _,
-                    &player.body,
-                    &self.celestial_bodies,
-                    &self.renderer,
-                    0.5,
-                );
-                self.render_data.geometries[1].models[0].meshes[2] = calculate_trajectory_leapfrog(
-                    t_scale * self.physics_sim.dt.as_secs_f32(),
-                    (steps as f32 / t_scale) as _,
-                    &player.body,
-                    &self.celestial_bodies,
-                    &self.renderer,
-                    1.0,
-                );
+                if self.frame_num.is_multiple_of(3600)
+                {
+                    self.render_data.geometries[1].models[0].meshes[1] = calculate_trajectory(
+                        t_scale * self.physics_sim.dt.as_secs_f32(),
+                        (steps as f32 / t_scale) as _,
+                        &player.body,
+                        &self.celestial_bodies,
+                        &self.renderer,
+                        0.5,
+                    );
+                    self.render_data.geometries[1].models[0].meshes[2] =
+                        calculate_trajectory_leapfrog(
+                            t_scale * self.physics_sim.dt.as_secs_f32(),
+                            (steps as f32 / t_scale) as _,
+                            &player.body,
+                            &self.celestial_bodies,
+                            &self.renderer,
+                            1.0,
+                        );
+                }
             }
         }
         self.renderer.queue.write_buffer(

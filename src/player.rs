@@ -34,7 +34,7 @@ impl Player
         Self {
             controller: SpaceshipController::new(InputSettings {
                 sensitivity: 0.01,
-                speed: 200.0,
+                speed: 20.0,
             }),
         }
     }
