@@ -108,7 +108,7 @@ impl State
         let projection = camera::Projection::new(
             renderer.config.width,
             renderer.config.height,
-            110.0 * math::DEG_TO_RAD as f32,
+            140.0 * math::DEG_TO_RAD as f32,
             1.0,
             100000.0,
         );
@@ -274,7 +274,7 @@ impl State
         texture_bind_group_layout: &BindGroupLayout,
     ) -> wgpu::BindGroup
     {
-        let diffuse_bytes = include_bytes!("../res/textures/8pxBlocksDiffuse.png");
+        let diffuse_bytes = include_bytes!("../res/textures/starmap_g8k.jpg");
         let diffuse_texture = texture::Texture::from_bytes(
             &renderer.device,
             &renderer.queue,
@@ -361,7 +361,7 @@ impl State
 
 
 
-    pub fn handle_input(&mut self, event_loop: &ActiveEventLoop, event: InputEvent)
+    pub fn handle_input(&mut self, _: &ActiveEventLoop, event: InputEvent)
     {
         if let InputEvent::Keyboard {
             code: KeyCode::Escape,

@@ -49,6 +49,7 @@ pub trait Camera
 pub struct CameraUniform
 {
     view_projection: [[f32; 4]; 4],
+    inv_view_projection: [[f32; 4]; 4],
     view_position: [f32; 4],
     resolution: [u32; 4],
 }
@@ -62,6 +63,7 @@ impl CameraUniform
         Self {
             view_position: [0.0; 4],
             view_projection: Matrix4::identity().into(),
+            inv_view_projection: Matrix4::identity().into(),
             resolution: [0; 4],
         }
     }
@@ -75,8 +77,10 @@ impl CameraUniform
         resolution: [u32; 2],
     )
     {
+        let proj = projection.calc_matrix() * camera.calc_matrix();
         self.view_position = camera.get_position().to_homogeneous().into();
-        self.view_projection = (projection.calc_matrix() * camera.calc_matrix()).into();
+        self.view_projection = proj.into();
+        self.inv_view_projection = proj.try_inverse().unwrap().into();
         self.resolution = [resolution[0], resolution[1], 0, 0];
     }
 

@@ -1,6 +1,7 @@
 
 struct CameraUniform {
     view_proj: mat4x4<f32>,
+    inv_view_proj: mat4x4<f32>,
     view_pos: vec4<f32>,
     resolution: vec2<u32>,
 };
@@ -82,7 +83,7 @@ fn vs_main(
 ) -> VertexOutput {
     var out: VertexOutput;
     
-    let world_position = model_transform * vec4<f32>(model.position, 1.0);
+    let world_position = vec4<f32>(model.position, 1.0);
     out.clip_position = vec4<f32>(model.position, 1.0);
     out.world_position = world_position.xyz;
     out.tex_coords = model.tex_coords;
@@ -92,12 +93,39 @@ fn vs_main(
 
 
 
+const PI = 3.14159265359;
+const TAU = 6.28318530718;
+
+
+
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32>
 {
-    let uv = in.clip_position.xy / vec2(f32(camera.resolution.x), f32(camera.resolution.y));
+    let uv = in.tex_coords;  // Use interpolated tex_coords
     
-    let color = textureSample(t_diffuse, s_diffuse, uv);
+    // NDC from UV (Y flipped for viewport origin top-left)
+    let ndc = vec2<f32>(2.0 * uv.x - 1.0, 2.0 * uv.y - 1.0);
+    
+    // Unproject near/far planes to world space
+    let near = camera.inv_view_proj * vec4<f32>(ndc.x, ndc.y, -1.0, 1.0);
+    let far = camera.inv_view_proj * vec4<f32>(ndc.x, ndc.y,  1.0, 1.0);
+    
+    let near_pos = near.xyz / near.w;
+    let far_pos = far.xyz / far.w;
+    
+    // Ray: origin at camera, direction towards far
+    let origin = camera.view_pos.xyz;
+    let dir = normalize(far_pos - origin);
+    
+    // Sample environment map (equirectangular)
+    let color = textureSample(t_diffuse, s_diffuse, dir_to_sphere(dir));
+    
+    return color;  // Full color, no arbitrary discard
+}
 
-    return vec4(uv * color.xy, 0.0, 1.0);
+
+
+fn dir_to_sphere(dir: vec3<f32>) -> vec2<f32>
+{
+    return vec2<f32>(0.5 + atan2(dir.y, dir.x) / TAU, acos(dir.z) / PI);
 }
