@@ -11,14 +11,15 @@ use crate::{
     math,
     model::{
         Model,
+        ModelMesh,
         TransformUniform,
     },
     physics::{
-        physics_sim::PhysicsSim,
-        trajectory::{
-            calculate_trajectory,
-            calculate_trajectory_leapfrog,
+        physics_environment::{
+            EmptyForceField,
+            ForceField,
         },
+        physics_sim::PhysicsSim,
     },
     player::spaceship_controller::SpaceshipController,
     rendering::{
@@ -33,7 +34,10 @@ use crate::{
             SphereLight,
             SunLight,
         },
-        mesh::MeshBuffer,
+        mesh::{
+            MeshBuffer,
+            MeshData,
+        },
         render_pass_data::{
             GeometryGroup,
             RenderData,
@@ -48,11 +52,7 @@ use crate::{
         Vertex,
     },
 };
-use nalgebra::{
-    Rotation3,
-    Vector3,
-};
-use rand::rngs::ThreadRng;
+use nalgebra::Vector3;
 use std::{
     sync::Arc,
     time::Duration,
@@ -78,7 +78,6 @@ pub struct State
     physics_sim: PhysicsSim,
     camera_controller: CameraController<OrbitCamera>,
     pub renderer: Renderer,
-    celestial_bodies: CelestialBodyContainer,
 }
 
 
@@ -95,14 +94,15 @@ impl State
         let diffuse_bind_group =
             State::create_diffuse_bind_group(&renderer, &texture_bind_group_layout);
 
-        let [shader, line_shader] = renderer.create_shaders(&[
+        let [_shader, line_shader, screen_quad_shader] = renderer.create_shaders(&[
             include_str!("mesh_shader.wgsl"),
             include_str!("line_shader.wgsl"),
+            include_str!("screen_quad_shader.wgsl"),
         ]);
 
         let spaceship = SpaceshipController::new(InputSettings {
             sensitivity: 0.005,
-            speed: 200.0,
+            speed: 500.0,
         });
 
         let camera_controller = CameraController::new(OrbitCamera::new(
@@ -174,7 +174,7 @@ impl State
             &render_pipeline_layout,
             &[ModelVertex::desc()],
             wgpu::PrimitiveTopology::TriangleList,
-            &shader,
+            &screen_quad_shader,
         );
         let line_render_pipeline = renderer.create_render_pipeline(
             "line_render_pipeline",
@@ -184,22 +184,11 @@ impl State
             &line_shader,
         );
 
-        let mut rng = ThreadRng::default();
-        let mut celestial_bodies = CelestialBodyContainer::new();
-        celestial_bodies.generate_planets(20, 1_000.0, 10_000.0, &mut rng);
-
-        let mut celestial_meshes = CelestialMeshContainer::new();
-        celestial_meshes.add_planets(&celestial_bodies.bodies, &renderer);
-
         let physics_sim = PhysicsSim::new(
             Duration::from_secs_f32(1.0 / 180.0),
             spaceship,
-            celestial_bodies.clone(),
+            EmptyForceField::new(),
         );
-
-        let spaceship_model = load_model("res/SpaceShip/simpleSpaceShip.obj", &renderer)
-            .await
-            .expect("Should be able to load model.");
 
         let render_data = RenderData::new(
             camera_buffer,
@@ -211,34 +200,19 @@ impl State
                 transform_bind_group,
             ],
             vec![render_pipeline, line_render_pipeline],
-            vec![
-                GeometryGroup {
-                    models: celestial_meshes.models,
-                    pipeline_id: 0,
-                },
-                GeometryGroup {
-                    models: vec![Model {
-                        meshes: vec![
-                            MeshBuffer::new(&renderer),
-                            MeshBuffer::new(&renderer),
-                            MeshBuffer::new(&renderer),
-                        ],
-                        transform: TransformUniform::new(),
-                    }],
-                    pipeline_id: 1,
-                },
-                GeometryGroup {
-                    models: vec![spaceship_model],
-                    pipeline_id: 0,
-                },
-            ],
+            vec![GeometryGroup {
+                models: vec![Model::new(
+                    vec![MeshBuffer::from_data(&MeshData::quad(), &renderer)],
+                    TransformUniform::default(),
+                )],
+                pipeline_id: 0,
+            }],
             depth_texture,
         );
 
         Ok(Self {
             frame_num: 0,
             camera_controller,
-            celestial_bodies,
             physics_sim,
             renderer,
             projection,
@@ -375,48 +349,6 @@ impl State
             self.camera_controller.focus_body(&player);
             self.camera_uniform
                 .update_view_proj(&self.camera_controller, &self.projection);
-
-            self.render_data.geometries[2].models[0].transform =
-                (player.body.state.get_transform()
-                    * Rotation3::face_towards(
-                        &self.camera_controller.camera.forward,
-                        &Vector3::y_axis().into_inner(),
-                    ))
-                .into();
-
-            if self.frame_num.is_multiple_of(1200)
-            {
-                let t_scale = 2.0;
-                let steps = 1600 * 60 * 10;
-                self.render_data.geometries[1].models[0].meshes[0] = calculate_trajectory(
-                    self.physics_sim.dt.as_secs_f32(),
-                    steps,
-                    &player.body,
-                    &self.celestial_bodies,
-                    &self.renderer,
-                    0.0,
-                );
-                if self.frame_num.is_multiple_of(3600)
-                {
-                    self.render_data.geometries[1].models[0].meshes[1] = calculate_trajectory(
-                        t_scale * self.physics_sim.dt.as_secs_f32(),
-                        (steps as f32 / t_scale) as _,
-                        &player.body,
-                        &self.celestial_bodies,
-                        &self.renderer,
-                        0.5,
-                    );
-                    self.render_data.geometries[1].models[0].meshes[2] =
-                        calculate_trajectory_leapfrog(
-                            t_scale * self.physics_sim.dt.as_secs_f32(),
-                            (steps as f32 / t_scale) as _,
-                            &player.body,
-                            &self.celestial_bodies,
-                            &self.renderer,
-                            1.0,
-                        );
-                }
-            }
         }
         self.renderer.queue.write_buffer(
             &self.render_data.camera_buffer,

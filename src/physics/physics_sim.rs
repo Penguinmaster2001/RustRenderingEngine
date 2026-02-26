@@ -6,6 +6,7 @@ use crate::{
     physics::physics_environment::ForceField,
     player::spaceship_controller::SpaceshipController,
 };
+use nalgebra::Vector3;
 use std::{
     sync::{
         Arc,
@@ -146,8 +147,15 @@ impl<F: ForceField> PhysicsThread<F>
                     / player.body.properties.mass;
 
                 player.body.state.add_acceleration(force);
+                let damping = -(0.05 / self.dt.as_secs_f32()) * player.body.state.get_vel();
+                player.body.state.add_acceleration(damping);
+
                 player.update(self.dt);
-                // println!("Update, {:?}, {:?}", dt, self.dt);
+
+                if player.body.state.get_vel().magnitude_squared() < 0.5
+                {
+                    player.body.state.set_vel(Vector3::zeros());
+                }
             }
         }
     }

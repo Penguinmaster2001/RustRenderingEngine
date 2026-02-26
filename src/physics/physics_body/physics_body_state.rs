@@ -40,6 +40,13 @@ impl<S: Scalar> PhysicsBodyState<S>
 
 
 
+    pub fn set_vel(&mut self, new_vel: Vector3<S>)
+    {
+        self.velocity = new_vel
+    }
+
+
+
     pub fn get_acc(&self) -> &Vector3<S>
     {
         &self.acceleration

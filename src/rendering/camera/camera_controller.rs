@@ -3,6 +3,7 @@ use crate::{
     player::spaceship_controller::SpaceshipController,
     rendering::camera::{
         Camera,
+        FreeCamera,
         OrbitCamera,
     },
 };
@@ -50,6 +51,23 @@ impl InputHandler for CameraController<OrbitCamera>
 
         self.camera.distance = (self.camera.distance + (2.0 * -delta)).clamp(10.0, 20000.0);
         true
+    }
+}
+
+
+
+impl InputHandler for CameraController<FreeCamera>
+{
+    fn handle_key(&mut self, _key: winit::keyboard::KeyCode, _pressed: bool) -> bool
+    {
+        false
+    }
+
+
+
+    fn handle_mouse_movement(&mut self, _delta: nalgebra::Vector2<f32>) -> bool
+    {
+        false
     }
 }
 
