@@ -1,8 +1,4 @@
 use crate::{
-    celestial_bodies::{
-        CelestialBodyContainer,
-        planet::planet_meshing::CelestialMeshContainer,
-    },
     input::{
         InputEvent,
         InputHandler,
@@ -11,14 +7,10 @@ use crate::{
     math,
     model::{
         Model,
-        ModelMesh,
         TransformUniform,
     },
     physics::{
-        physics_environment::{
-            EmptyForceField,
-            ForceField,
-        },
+        physics_environment::EmptyForceField,
         physics_sim::PhysicsSim,
     },
     player::spaceship_controller::SpaceshipController,
@@ -44,7 +36,6 @@ use crate::{
         },
         renderer::Renderer,
     },
-    resources::load_model,
     texture,
     vertex::{
         ModelVertex,
@@ -71,6 +62,8 @@ use winit::{
 
 pub struct State
 {
+    resolution: [u32; 2],
+    cursor_locked: bool,
     frame_num: u32,
     projection: camera::Projection,
     camera_uniform: camera::CameraUniform,
@@ -87,7 +80,7 @@ impl State
     pub async fn new(window: Arc<Window>) -> anyhow::Result<Self>
     {
         let renderer = Renderer::new(window).await?;
-        renderer.window.set_cursor_grab(CursorGrabMode::Locked)?;
+        renderer.window.set_cursor_grab(CursorGrabMode::None)?;
 
         let texture_bind_group_layout = State::create_texture_bind_group_layout(&renderer);
 
@@ -121,7 +114,7 @@ impl State
         );
 
         let mut camera_uniform = camera::CameraUniform::new();
-        camera_uniform.update_view_proj(&camera_controller.camera, &projection);
+        camera_uniform.update_view_proj(&camera_controller.camera, &projection, [0, 0]);
 
         let camera_buffer = camera_uniform.create_camera_buffer(&renderer);
 
@@ -211,6 +204,8 @@ impl State
         );
 
         Ok(Self {
+            cursor_locked: false,
+            resolution: [0, 0],
             frame_num: 0,
             camera_controller,
             physics_sim,
@@ -329,6 +324,7 @@ impl State
     {
         self.renderer.resize(width, height);
         self.projection.resize(width, height);
+        self.resolution = [width, height];
 
         if width > 0 && height > 0
         {
@@ -347,8 +343,11 @@ impl State
         if let Some(player) = self.physics_sim.get_player()
         {
             self.camera_controller.focus_body(&player);
-            self.camera_uniform
-                .update_view_proj(&self.camera_controller, &self.projection);
+            self.camera_uniform.update_view_proj(
+                &self.camera_controller,
+                &self.projection,
+                self.resolution,
+            );
         }
         self.renderer.queue.write_buffer(
             &self.render_data.camera_buffer,
@@ -369,7 +368,21 @@ impl State
             pressed: true,
         } = event
         {
-            event_loop.exit();
+            if self.cursor_locked
+            {
+                self.renderer
+                    .window
+                    .set_cursor_grab(CursorGrabMode::None)
+                    .unwrap();
+            }
+            else
+            {
+                self.renderer
+                    .window
+                    .set_cursor_grab(CursorGrabMode::Locked)
+                    .unwrap();
+            }
+            self.cursor_locked = !self.cursor_locked;
         }
         else
         {

@@ -50,6 +50,7 @@ pub struct CameraUniform
 {
     view_projection: [[f32; 4]; 4],
     view_position: [f32; 4],
+    resolution: [u32; 4],
 }
 
 
@@ -61,15 +62,22 @@ impl CameraUniform
         Self {
             view_position: [0.0; 4],
             view_projection: Matrix4::identity().into(),
+            resolution: [0; 4],
         }
     }
 
 
 
-    pub fn update_view_proj<T: Camera>(&mut self, camera: &T, projection: &Projection)
+    pub fn update_view_proj<T: Camera>(
+        &mut self,
+        camera: &T,
+        projection: &Projection,
+        resolution: [u32; 2],
+    )
     {
         self.view_position = camera.get_position().to_homogeneous().into();
-        self.view_projection = (projection.calc_matrix() * camera.calc_matrix()).into()
+        self.view_projection = (projection.calc_matrix() * camera.calc_matrix()).into();
+        self.resolution = [resolution[0], resolution[1], 0, 0];
     }
 
 
