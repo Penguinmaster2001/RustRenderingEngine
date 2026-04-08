@@ -101,26 +101,22 @@ const TAU = 6.28318530718;
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32>
 {
-    let uv = in.tex_coords;  // Use interpolated tex_coords
+    let uv = in.tex_coords;
     
-    // NDC from UV (Y flipped for viewport origin top-left)
     let ndc = vec2<f32>(2.0 * uv.x - 1.0, 2.0 * uv.y - 1.0);
     
-    // Unproject near/far planes to world space
     let near = camera.inv_view_proj * vec4<f32>(ndc.x, ndc.y, -1.0, 1.0);
     let far = camera.inv_view_proj * vec4<f32>(ndc.x, ndc.y,  1.0, 1.0);
     
     let near_pos = near.xyz / near.w;
     let far_pos = far.xyz / far.w;
     
-    // Ray: origin at camera, direction towards far
     let origin = camera.view_pos.xyz;
     let dir = normalize(far_pos - origin);
     
-    // Sample environment map (equirectangular)
     let color = textureSample(t_diffuse, s_diffuse, dir_to_sphere(dir));
     
-    return color;  // Full color, no arbitrary discard
+    return color;
 }
 
 
