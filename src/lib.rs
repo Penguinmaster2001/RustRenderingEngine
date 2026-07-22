@@ -5,6 +5,7 @@ use winit::event_loop::EventLoop;
 
 pub mod app;
 pub mod celestial_bodies;
+pub mod chaos;
 pub mod chunking;
 pub mod input;
 pub mod instance;

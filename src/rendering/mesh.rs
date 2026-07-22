@@ -1,3 +1,5 @@
+use std::println;
+
 use crate::{
     rendering::renderer::Renderer,
     vertex::Vertex,
@@ -53,6 +55,18 @@ impl MeshBuffer
             index_buffer,
             index_count: 0,
         }
+    }
+
+
+
+    pub fn from_points<V: Vertex + bytemuck::NoUninit>(vertices: &[V], renderer: &Renderer)
+    -> Self
+    {
+        Self::from_verts(
+            vertices,
+            &(0u32..vertices.len() as _).collect::<Vec<u32>>(),
+            renderer,
+        )
     }
 
 

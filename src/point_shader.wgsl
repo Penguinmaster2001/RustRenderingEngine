@@ -104,5 +104,5 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32>
         color = vec3(0.1, 0.1, 1.0);
     }
     color *= mix(4.0, 0.1, pow(1.0 - in.tex_coords.x, 1.0));
-    return vec4(color, 1.0);
+    return vec4(1.0, 1.0, 1.0, 1.0);
 }

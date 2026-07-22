@@ -3,6 +3,13 @@ use crate::{
         CelestialBodyContainer,
         planet::planet_meshing::CelestialMeshContainer,
     },
+    chaos::{
+        ChaoticPoints,
+        maps::polynomial_maps::{
+            PolynomialMap,
+            PolynomialTerm,
+        },
+    },
     input::{
         InputEvent,
         InputHandler,
@@ -13,7 +20,10 @@ use crate::{
         Model,
         TransformUniform,
     },
-    physics::physics_sim::PhysicsSim,
+    physics::{
+        physics_environment::ConstantForceField,
+        physics_sim::PhysicsSim,
+    },
     player::spaceship_controller::SpaceshipController,
     rendering::{
         camera::{
@@ -40,18 +50,19 @@ use crate::{
     texture,
     vertex::{
         ModelVertex,
-        TextureVertex,
         Vertex,
     },
 };
 use nalgebra::{
-    Rotation3,
     Vector3,
+    vector,
 };
 use rand::rngs::ThreadRng;
 use std::{
+    println,
     sync::Arc,
     time::Duration,
+    vec,
 };
 use wgpu::BindGroupLayout;
 use winit::{
@@ -74,7 +85,7 @@ pub struct State
     physics_sim: PhysicsSim,
     camera_controller: CameraController<OrbitCamera>,
     pub renderer: Renderer,
-    celestial_bodies: CelestialBodyContainer,
+    points: ChaoticPoints<f32, PolynomialMap<f32, 2>, 2>,
 }
 
 
@@ -95,7 +106,7 @@ impl State
 
         let spaceship = SpaceshipController::new(InputSettings {
             sensitivity: 0.005,
-            speed: 200.0,
+            speed: 20.0,
         });
 
         let camera_controller = CameraController::new(OrbitCamera::new(
@@ -108,9 +119,9 @@ impl State
         let projection = camera::Projection::new(
             renderer.config.width,
             renderer.config.height,
-            110.0 * math::DEG_TO_RAD as f32,
-            1.0,
-            100000.0,
+            90.0 * math::DEG_TO_RAD as f32,
+            0.1,
+            1000.0,
         );
 
         let mut camera_uniform = camera::CameraUniform::new();
@@ -180,7 +191,7 @@ impl State
         let physics_sim = PhysicsSim::new(
             Duration::from_secs_f32(1.0 / 180.0),
             spaceship,
-            celestial_bodies.clone(),
+            ConstantForceField::default(),
         );
 
         let spaceship_model = Model::new(
@@ -208,10 +219,33 @@ impl State
             depth_texture,
         );
 
+        let map = PolynomialMap {
+            terms: vec![
+                PolynomialTerm {
+                    exponents: [0, 0],
+                    coefficient: vector![1.0, 0.0],
+                },
+                PolynomialTerm {
+                    exponents: [1, 0],
+                    coefficient: vector![0.0, 1.0],
+                },
+                PolynomialTerm {
+                    exponents: [2, 0],
+                    coefficient: vector![-1.4, 0.0],
+                },
+                PolynomialTerm {
+                    exponents: [0, 1],
+                    coefficient: vector![0.3, 0.0],
+                },
+            ],
+        };
+
+        let points = ChaoticPoints::from_point_grid(10.0f32, 500, map);
+
         Ok(Self {
             frame_num: 0,
             camera_controller,
-            celestial_bodies,
+            points,
             physics_sim,
             renderer,
             projection,
@@ -349,11 +383,31 @@ impl State
             self.camera_uniform
                 .update_view_proj(&self.camera_controller, &self.projection);
         }
+
         self.renderer.queue.write_buffer(
             &self.render_data.camera_buffer,
             0,
             bytemuck::cast_slice(&[self.camera_uniform]),
         );
+
+        if self.points.get_iter_num() < 1000
+        {
+            self.points.step();
+
+            self.render_data.geometries[0].models[0].meshes[0] = MeshBuffer::from_points(
+                &self
+                    .points
+                    .points
+                    .iter()
+                    .map(|p| ModelVertex {
+                        position: [p[0], p[1], 0.0],
+                        tex_coords: [0.0, 0.0],
+                        normal: [1.0, 0.0, 0.0],
+                    })
+                    .collect::<Vec<ModelVertex>>(),
+                &self.renderer,
+            );
+        }
 
         self.frame_num += 1;
         self.renderer.render(&self.render_data)

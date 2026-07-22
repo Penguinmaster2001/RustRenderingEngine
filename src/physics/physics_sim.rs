@@ -6,6 +6,7 @@ use crate::{
     physics::physics_environment::ForceField,
     player::spaceship_controller::SpaceshipController,
 };
+use nalgebra::Vector3;
 use std::{
     sync::{
         Arc,
@@ -147,8 +148,8 @@ impl<F: ForceField> PhysicsThread<F>
 
                 player.body.state.add_acceleration(force);
                 player.update(self.dt);
-                // println!("Update, {:?}, {:?}", dt, self.dt);
-                println!("{:?}", player.body.state);
+                player.body.state.velocity =
+                    player.body.state.velocity.lerp(&Vector3::zeros(), 0.1);
             }
         }
     }

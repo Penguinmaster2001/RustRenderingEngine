@@ -15,7 +15,7 @@ use nalgebra::{
 pub struct PhysicsBodyState<S: Scalar>
 {
     position: Point3<S>,
-    velocity: Vector3<S>,
+    pub velocity: Vector3<S>,
     acceleration: Vector3<S>,
     _rotation: Quaternion<S>,
     _angular_velocity: Vector3<S>,
