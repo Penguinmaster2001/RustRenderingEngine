@@ -11,7 +11,7 @@ use nalgebra::{
 
 
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct PhysicsBodyState<S: Scalar>
 {
     position: Point3<S>,

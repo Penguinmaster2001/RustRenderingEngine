@@ -72,4 +72,36 @@ impl MeshData<ModelVertex>
             vertex_count: vertex_count as u32,
         }
     }
+
+
+
+    pub fn new_screen_quad() -> Self
+    {
+        Self {
+            vertices: vec![
+                ModelVertex {
+                    position: [0.0, 0.0, 0.0],
+                    tex_coords: [0.0, 0.0],
+                    normal: [0.0, 0.0, -1.0],
+                },
+                ModelVertex {
+                    position: [1.0, 0.0, 0.0],
+                    tex_coords: [1.0, 0.0],
+                    normal: [0.0, 0.0, -1.0],
+                },
+                ModelVertex {
+                    position: [0.0, 1.0, 0.0],
+                    tex_coords: [0.0, 1.0],
+                    normal: [0.0, 0.0, -1.0],
+                },
+                ModelVertex {
+                    position: [1.0, 1.0, 0.0],
+                    tex_coords: [1.0, 1.0],
+                    normal: [0.0, 0.0, -1.0],
+                },
+            ],
+            indices: vec![0, 1, 2, 3],
+            vertex_count: 4,
+        }
+    }
 }

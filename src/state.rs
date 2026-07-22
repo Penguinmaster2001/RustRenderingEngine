@@ -13,13 +13,7 @@ use crate::{
         Model,
         TransformUniform,
     },
-    physics::{
-        physics_sim::PhysicsSim,
-        trajectory::{
-            calculate_trajectory,
-            calculate_trajectory_leapfrog,
-        },
-    },
+    physics::physics_sim::PhysicsSim,
     player::spaceship_controller::SpaceshipController,
     rendering::{
         camera::{
@@ -33,14 +27,16 @@ use crate::{
             SphereLight,
             SunLight,
         },
-        mesh::MeshBuffer,
+        mesh::{
+            MeshBuffer,
+            MeshData,
+        },
         render_pass_data::{
             GeometryGroup,
             RenderData,
         },
         renderer::Renderer,
     },
-    resources::load_model,
     texture,
     vertex::{
         ModelVertex,
@@ -95,10 +91,7 @@ impl State
         let diffuse_bind_group =
             State::create_diffuse_bind_group(&renderer, &texture_bind_group_layout);
 
-        let [shader, line_shader] = renderer.create_shaders(&[
-            include_str!("mesh_shader.wgsl"),
-            include_str!("line_shader.wgsl"),
-        ]);
+        let [point_shader] = renderer.create_shaders(&[include_str!("point_shader.wgsl")]);
 
         let spaceship = SpaceshipController::new(InputSettings {
             sensitivity: 0.005,
@@ -169,19 +162,12 @@ impl State
             "depth_texture",
         );
 
-        let render_pipeline = renderer.create_render_pipeline(
-            "mesh_render_pipeline",
+        let point_render_pipeline = renderer.create_render_pipeline(
+            "point_render_pipeline",
             &render_pipeline_layout,
             &[ModelVertex::desc()],
-            wgpu::PrimitiveTopology::TriangleList,
-            &shader,
-        );
-        let line_render_pipeline = renderer.create_render_pipeline(
-            "line_render_pipeline",
-            &render_pipeline_layout,
-            &[TextureVertex::desc()],
-            wgpu::PrimitiveTopology::LineStrip,
-            &line_shader,
+            wgpu::PrimitiveTopology::PointList,
+            &point_shader,
         );
 
         let mut rng = ThreadRng::default();
@@ -197,9 +183,13 @@ impl State
             celestial_bodies.clone(),
         );
 
-        let spaceship_model = load_model("res/SpaceShip/simpleSpaceShip.obj", &renderer)
-            .await
-            .expect("Should be able to load model.");
+        let spaceship_model = Model::new(
+            vec![MeshBuffer::from_data(
+                &MeshData::new_screen_quad(),
+                &renderer,
+            )],
+            TransformUniform::default(),
+        );
 
         let render_data = RenderData::new(
             camera_buffer,
@@ -210,28 +200,11 @@ impl State
                 light_bind_group,
                 transform_bind_group,
             ],
-            vec![render_pipeline, line_render_pipeline],
-            vec![
-                GeometryGroup {
-                    models: celestial_meshes.models,
-                    pipeline_id: 0,
-                },
-                GeometryGroup {
-                    models: vec![Model {
-                        meshes: vec![
-                            MeshBuffer::new(&renderer),
-                            MeshBuffer::new(&renderer),
-                            MeshBuffer::new(&renderer),
-                        ],
-                        transform: TransformUniform::new(),
-                    }],
-                    pipeline_id: 1,
-                },
-                GeometryGroup {
-                    models: vec![spaceship_model],
-                    pipeline_id: 0,
-                },
-            ],
+            vec![point_render_pipeline],
+            vec![GeometryGroup {
+                models: vec![spaceship_model],
+                pipeline_id: 0,
+            }],
             depth_texture,
         );
 
@@ -375,48 +348,6 @@ impl State
             self.camera_controller.focus_body(&player);
             self.camera_uniform
                 .update_view_proj(&self.camera_controller, &self.projection);
-
-            self.render_data.geometries[2].models[0].transform =
-                (player.body.state.get_transform()
-                    * Rotation3::face_towards(
-                        &self.camera_controller.camera.forward,
-                        &Vector3::y_axis().into_inner(),
-                    ))
-                .into();
-
-            if self.frame_num.is_multiple_of(1200)
-            {
-                let t_scale = 2.0;
-                let steps = 1600 * 60 * 10;
-                self.render_data.geometries[1].models[0].meshes[0] = calculate_trajectory(
-                    self.physics_sim.dt.as_secs_f32(),
-                    steps,
-                    &player.body,
-                    &self.celestial_bodies,
-                    &self.renderer,
-                    0.0,
-                );
-                if self.frame_num.is_multiple_of(3600)
-                {
-                    self.render_data.geometries[1].models[0].meshes[1] = calculate_trajectory(
-                        t_scale * self.physics_sim.dt.as_secs_f32(),
-                        (steps as f32 / t_scale) as _,
-                        &player.body,
-                        &self.celestial_bodies,
-                        &self.renderer,
-                        0.5,
-                    );
-                    self.render_data.geometries[1].models[0].meshes[2] =
-                        calculate_trajectory_leapfrog(
-                            t_scale * self.physics_sim.dt.as_secs_f32(),
-                            (steps as f32 / t_scale) as _,
-                            &player.body,
-                            &self.celestial_bodies,
-                            &self.renderer,
-                            1.0,
-                        );
-                }
-            }
         }
         self.renderer.queue.write_buffer(
             &self.render_data.camera_buffer,

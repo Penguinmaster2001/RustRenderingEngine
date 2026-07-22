@@ -148,6 +148,7 @@ impl<F: ForceField> PhysicsThread<F>
                 player.body.state.add_acceleration(force);
                 player.update(self.dt);
                 // println!("Update, {:?}, {:?}", dt, self.dt);
+                println!("{:?}", player.body.state);
             }
         }
     }
