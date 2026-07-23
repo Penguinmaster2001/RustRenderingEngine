@@ -1,5 +1,12 @@
-use crate::chaos::maps::Map;
+use crate::chaos::{
+    ChaoticPoints,
+    maps::Map,
+};
 use nalgebra::RealField;
+use rand::{
+    Rng,
+    rngs::ThreadRng,
+};
 use std::println;
 
 
@@ -62,34 +69,32 @@ where
             }
 
             let mut right_sum = 0;
-            for j in (i as usize + 1)..exponents.len()
-            {
+            ((i as usize + 1)..exponents.len()).for_each(|j| {
                 right_sum += exponents[j];
-            }
+            });
 
             exponents[i as usize] -= 1;
             exponents[i as usize + 1] = right_sum + 1;
 
-            for j in (i as usize + 2)..exponents.len()
-            {
+            ((i as usize + 2)..exponents.len()).for_each(|j| {
                 exponents[j] = 0;
-            }
+            });
 
             let current_order = max_order - exponents[0];
 
-            if rng().abs() < T::from_usize(current_order / 2).unwrap().recip()
+            let mut coefficient = nalgebra::SVector::zeros();
+            for c in 0..D
             {
-                let mut coefficient = nalgebra::SVector::zeros();
-                for c in 0..D
+                if rng().abs() < T::from_usize(current_order).unwrap().recip()
                 {
                     coefficient[c] = rng() / (T::one() + T::one()).powi((current_order - 1) as _);
                 }
-
-                terms.push(PolynomialTerm {
-                    exponents: *exponents[1..(D + 1)].as_array().unwrap(),
-                    coefficient,
-                });
             }
+
+            terms.push(PolynomialTerm {
+                exponents: *exponents[1..(D + 1)].as_array().unwrap(),
+                coefficient,
+            });
         }
         println!("{:?}\n\n", terms);
 
@@ -116,5 +121,21 @@ impl<T: RealField, const D: usize> Map<T, D> for PolynomialMap<T, D>
         }
 
         output
+    }
+}
+
+
+
+pub type ChaoticPolynomialMap<T, const D: usize> = ChaoticPoints<T, PolynomialMap<T, D>, D>;
+
+
+impl<const D: usize> ChaoticPolynomialMap<f32, D>
+{
+    pub fn new_chaotic_polynomial_map() -> Self
+    {
+        let mut rng = ThreadRng::default();
+        let map = PolynomialMap::new_random(|| rng.random_range(-1.5..1.5), 4);
+
+        ChaoticPoints::from_point_grid(1.0f32, 10, map)
     }
 }

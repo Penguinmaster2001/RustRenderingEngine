@@ -10,29 +10,32 @@ use std::{
 
 
 
-pub struct WorkerHandle<C, T, S>
+pub struct WorkerHandle<T, S>
 {
-    pub config: C,
     input_tx: mpsc::Sender<T>,
-    handle: thread::JoinHandle<()>,
+    _handle: thread::JoinHandle<()>,
     state: Arc<RwLock<S>>,
 }
 
 
 
-impl<'w: 'static, C: Send + Copy + 'w, T: Send + 'w, S: Send + Sync + 'w> WorkerHandle<C, T, S>
+impl<T: 'static + Send, S: 'static + Send + Sync> WorkerHandle<T, S>
 {
-    pub fn new<I: Send + 'w, F>(config: C, state: S, internal_state: I, run: F) -> Self
+    pub fn new<I: 'static + Send, C: 'static + Send, F>(
+        config: C,
+        state: S,
+        internal_state: I,
+        run: F,
+    ) -> Self
     where
-        F: FnOnce(WorkerThread<C, T, S, I>) + Send + 'w,
+        F: 'static + Send + FnOnce(WorkerThread<C, T, S, I>),
     {
         let state = Arc::new(RwLock::new(state));
         let (input_tx, input_rx) = mpsc::channel();
         let worker_thread = WorkerThread::new(config, state.clone(), internal_state, input_rx);
         Self {
-            config,
             input_tx,
-            handle: thread::spawn(move || {
+            _handle: thread::spawn(move || {
                 run(worker_thread);
             }),
             state,

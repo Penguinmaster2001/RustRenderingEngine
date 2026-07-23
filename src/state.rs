@@ -1,11 +1,14 @@
 use crate::{
-    celestial_bodies::{
-        CelestialBodyContainer,
-        planet::planet_meshing::CelestialMeshContainer,
-    },
     chaos::{
-        ChaoticPoints,
-        maps::polynomial_maps::PolynomialMap,
+        ChaosConfig,
+        chaos_thread::{
+            ChaosCommand,
+            ChaosHandle,
+        },
+        maps::polynomial_maps::{
+            ChaoticPolynomialMap,
+            PolynomialMap,
+        },
     },
     input::{
         InputEvent,
@@ -48,10 +51,6 @@ use crate::{
     },
 };
 use nalgebra::Vector3;
-use rand::{
-    Rng,
-    rngs::ThreadRng,
-};
 use std::{
     sync::Arc,
     vec,
@@ -81,7 +80,7 @@ pub struct State
     physics_sim: PhysicsSim,
     camera_controller: CameraController<OrbitCamera>,
     pub renderer: Renderer,
-    points: ChaoticPoints<f32, PolynomialMap<f32, DIM>, DIM>,
+    points: ChaosHandle<f32, PolynomialMap<f32, DIM>, DIM>,
 }
 
 
@@ -177,13 +176,6 @@ impl State
             &point_shader,
         );
 
-        let mut rng = ThreadRng::default();
-        let mut celestial_bodies = CelestialBodyContainer::new();
-        celestial_bodies.generate_planets(20, 1_000.0, 10_000.0, &mut rng);
-
-        let mut celestial_meshes = CelestialMeshContainer::new();
-        celestial_meshes.add_planets(&celestial_bodies.bodies, &renderer);
-
         let physics_sim = PhysicsSim::new_physics_sim(spaceship);
 
         let spaceship_model = Model::new(
@@ -211,26 +203,21 @@ impl State
             depth_texture,
         );
 
+        let points = ChaosHandle::new_chaos_thread(ChaosConfig {
+            iterations: 5000,
+            points_generator: ChaoticPolynomialMap::new_chaotic_polynomial_map,
+        });
+
         Ok(Self {
             frame_num: 0,
             camera_controller,
-            points: State::new_chaos(),
+            points,
             physics_sim,
             renderer,
             projection,
             camera_uniform,
             render_data,
         })
-    }
-
-
-
-    fn new_chaos() -> ChaoticPoints<f32, PolynomialMap<f32, DIM>, DIM>
-    {
-        let mut rng = ThreadRng::default();
-        let map = PolynomialMap::new_random(|| rng.random_range(-1.0..1.0), 4);
-
-        ChaoticPoints::from_point_grid(1.0f32, 10, map)
     }
 
 
@@ -369,15 +356,11 @@ impl State
             bytemuck::cast_slice(&[self.camera_uniform]),
         );
 
-        if self.points.get_iter_num() < 500
+        if let Some(points) = self.points.get_state()
         {
-            self.points.step();
-
             let mut count_within_bounds = 0;
-
             self.render_data.geometries[0].models[0].meshes[0] = MeshBuffer::from_points(
-                &self
-                    .points
+                &points
                     .points
                     .iter()
                     .map(|p| {
@@ -395,9 +378,9 @@ impl State
                 &self.renderer,
             );
 
-            if (count_within_bounds as f32 / self.points.points.len() as f32) < 0.01
+            if (count_within_bounds as f32 / points.points.len() as f32) < 0.01
             {
-                self.points = State::new_chaos();
+                self.points.send(ChaosCommand::CreateNew);
             }
         }
 
@@ -428,7 +411,7 @@ impl State
                 pressed: true,
             } = event
             {
-                self.points = State::new_chaos();
+                self.points.send(ChaosCommand::CreateNew);
             }
         }
     }

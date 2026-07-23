@@ -3,7 +3,19 @@ use nalgebra::RealField;
 
 
 
+pub mod chaos_thread;
 pub mod maps;
+
+
+
+#[derive(Clone)]
+pub struct ChaosConfig<T, M, F, const D: usize>
+where
+    F: FnMut() -> ChaoticPoints<T, M, D>,
+{
+    pub iterations: u32,
+    pub points_generator: F,
+}
 
 
 
@@ -12,6 +24,29 @@ pub struct ChaoticPoints<T, M, const D: usize>
     pub points: Vec<nalgebra::SVector<T, D>>,
     pub map: M,
     iter_num: u32,
+}
+
+
+
+impl<T, M, const D: usize> ChaoticPoints<T, M, D>
+{
+    pub fn new(points: Vec<nalgebra::SVector<T, D>>, map: M) -> Self
+    {
+        Self {
+            points,
+            map,
+            iter_num: 0,
+        }
+    }
+
+
+
+    pub fn copy_from(&mut self, other: ChaoticPoints<T, M, D>)
+    {
+        self.points = other.points;
+        self.map = other.map;
+        self.iter_num = other.iter_num;
+    }
 }
 
 

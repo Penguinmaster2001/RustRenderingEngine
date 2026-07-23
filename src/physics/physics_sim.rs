@@ -22,7 +22,7 @@ use winit::keyboard::KeyCode;
 
 
 
-pub type PhysicsSim = WorkerHandle<instant::Duration, InputEvent, SpaceshipController>;
+pub type PhysicsSim = WorkerHandle<InputEvent, SpaceshipController>;
 pub type PhysicsThread<F> =
     WorkerThread<instant::Duration, InputEvent, SpaceshipController, (Instant, F)>;
 
