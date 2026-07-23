@@ -53,13 +53,12 @@ use crate::{
         Vertex,
     },
 };
-use nalgebra::{
-    Vector3,
-    vector,
+use nalgebra::Vector3;
+use rand::{
+    Rng,
+    rngs::ThreadRng,
 };
-use rand::rngs::ThreadRng;
 use std::{
-    println,
     sync::Arc,
     time::Duration,
     vec,
@@ -76,6 +75,10 @@ use winit::{
 
 
 
+const DIM: usize = 2;
+
+
+
 pub struct State
 {
     frame_num: u32,
@@ -85,7 +88,7 @@ pub struct State
     physics_sim: PhysicsSim,
     camera_controller: CameraController<OrbitCamera>,
     pub renderer: Renderer,
-    points: ChaoticPoints<f32, PolynomialMap<f32, 2>, 2>,
+    points: ChaoticPoints<f32, PolynomialMap<f32, DIM>, DIM>,
 }
 
 
@@ -106,7 +109,7 @@ impl State
 
         let spaceship = SpaceshipController::new(InputSettings {
             sensitivity: 0.005,
-            speed: 20.0,
+            speed: 10.0,
         });
 
         let camera_controller = CameraController::new(OrbitCamera::new(
@@ -120,8 +123,8 @@ impl State
             renderer.config.width,
             renderer.config.height,
             90.0 * math::DEG_TO_RAD as f32,
-            0.1,
-            1000.0,
+            0.01,
+            100.0,
         );
 
         let mut camera_uniform = camera::CameraUniform::new();
@@ -219,39 +222,47 @@ impl State
             depth_texture,
         );
 
-        let map = PolynomialMap {
-            terms: vec![
-                PolynomialTerm {
-                    exponents: [0, 0],
-                    coefficient: vector![1.0, 0.0],
-                },
-                PolynomialTerm {
-                    exponents: [1, 0],
-                    coefficient: vector![0.0, 1.0],
-                },
-                PolynomialTerm {
-                    exponents: [2, 0],
-                    coefficient: vector![-1.4, 0.0],
-                },
-                PolynomialTerm {
-                    exponents: [0, 1],
-                    coefficient: vector![0.3, 0.0],
-                },
-            ],
-        };
-
-        let points = ChaoticPoints::from_point_grid(10.0f32, 500, map);
+        // let map = PolynomialMap {
+        //     terms: vec![
+        //         PolynomialTerm {
+        //             exponents: [0, 0],
+        //             coefficient: vector![1.0, 0.0],
+        //         },
+        //         PolynomialTerm {
+        //             exponents: [1, 0],
+        //             coefficient: vector![0.0, 1.0],
+        //         },
+        //         PolynomialTerm {
+        //             exponents: [2, 0],
+        //             coefficient: vector![-1.4, 0.0],
+        //         },
+        //         PolynomialTerm {
+        //             exponents: [0, 1],
+        //             coefficient: vector![0.3, 0.0],
+        //         },
+        //     ],
+        // };
 
         Ok(Self {
             frame_num: 0,
             camera_controller,
-            points,
+            points: State::new_chaos(),
             physics_sim,
             renderer,
             projection,
             camera_uniform,
             render_data,
         })
+    }
+
+
+
+    fn new_chaos() -> ChaoticPoints<f32, PolynomialMap<f32, DIM>, DIM>
+    {
+        let mut rng = ThreadRng::default();
+        let map = PolynomialMap::new_random(|| rng.random_range(-0.5..0.5), 3);
+
+        ChaoticPoints::from_point_grid(1.0f32, 25, map)
     }
 
 
@@ -430,6 +441,13 @@ impl State
             if let InputEvent::MouseWheel { delta } = event
             {
                 self.camera_controller.handle_mouse_scroll(&delta);
+            }
+            else if let InputEvent::Keyboard {
+                code: KeyCode::KeyP,
+                pressed: true,
+            } = event
+            {
+                self.points = State::new_chaos();
             }
         }
     }
