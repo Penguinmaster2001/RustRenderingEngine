@@ -17,6 +17,7 @@ pub mod rendering;
 pub mod resources;
 pub mod state;
 pub mod texture;
+pub mod threading;
 pub mod vertex;
 pub mod world_gen;
 

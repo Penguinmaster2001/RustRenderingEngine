@@ -3,154 +3,99 @@ use crate::{
         InputEvent,
         InputHandler,
     },
-    physics::physics_environment::ForceField,
+    physics::physics_environment::{
+        ConstantForceField,
+        ForceField,
+    },
     player::spaceship_controller::SpaceshipController,
+    threading::{
+        WorkerHandle,
+        WorkerThread,
+    },
 };
 use nalgebra::Vector3;
-use std::{
-    sync::{
-        Arc,
-        RwLock,
-        RwLockReadGuard,
-        mpsc,
-    },
-    thread,
-    time::Instant,
+use std::time::{
+    Duration,
+    Instant,
 };
 use winit::keyboard::KeyCode;
 
 
 
-pub struct PhysicsSim
-{
-    pub dt: instant::Duration,
-    input_tx: mpsc::Sender<InputEvent>,
-    _handle: thread::JoinHandle<()>,
-    player: Arc<RwLock<SpaceshipController>>,
-}
+pub type PhysicsSim = WorkerHandle<instant::Duration, InputEvent, SpaceshipController>;
+pub type PhysicsThread<F> =
+    WorkerThread<instant::Duration, InputEvent, SpaceshipController, (Instant, F)>;
 
 
 
 impl PhysicsSim
 {
-    pub fn new<F: 'static + ForceField + Send>(
-        dt: instant::Duration,
-        player: SpaceshipController,
-        world: F,
-    ) -> Self
+    pub fn new_physics_sim(spaceship: SpaceshipController) -> Self
     {
-        let player = Arc::new(RwLock::new(player));
-        let (input_tx, input_rx) = mpsc::channel();
-        let mut physics_thread = PhysicsThread::new(dt, player.clone(), world, input_rx);
-        Self {
-            dt,
-            input_tx,
-            _handle: thread::spawn(move || {
-                physics_thread.run();
-            }),
-            player,
-        }
-    }
-
-
-
-    pub fn handle_input(&self, event: &InputEvent)
-    {
-        self.input_tx
-            .send(*event)
-            .expect("Should be able to send input event.");
-    }
-
-
-
-    pub fn get_player(&'_ self) -> Option<RwLockReadGuard<'_, SpaceshipController>>
-    {
-        self.player.read().ok()
+        PhysicsSim::new(
+            Duration::from_secs_f32(1.0 / 180.0),
+            spaceship,
+            (Instant::now(), ConstantForceField::default()),
+            run,
+        )
     }
 }
 
 
 
-pub struct PhysicsThread<F: ForceField>
+fn run<F>(physics_thread: PhysicsThread<F>)
+where
+    F: ForceField,
 {
-    dt: instant::Duration,
-    last_time: Instant,
-    player: Arc<RwLock<SpaceshipController>>,
-    world: F,
-    input_rx: mpsc::Receiver<InputEvent>,
-}
-
-
-
-impl<F: ForceField> PhysicsThread<F>
-{
-    pub fn new(
-        dt: instant::Duration,
-        player: Arc<RwLock<SpaceshipController>>,
-        world: F,
-        input_rx: mpsc::Receiver<InputEvent>,
-    ) -> Self
+    let mut physics_thread = physics_thread;
+    let mut scale = 4u32.pow(0);
+    loop
     {
-        Self {
-            dt,
-            last_time: Instant::now(),
-            player,
-            world,
-            input_rx,
-        }
-    }
-
-
-
-    pub fn run(&mut self)
-    {
-        let mut scale = 4u32.pow(0);
-        loop
+        let now = Instant::now();
+        let dt = now - physics_thread.internal_state.0;
+        if dt * scale < physics_thread.config
         {
-            let now = Instant::now();
-            let dt = now - self.last_time;
-            if dt * scale < self.dt
+            continue;
+        }
+        physics_thread.internal_state.0 = now;
+        if let Ok(mut player) = physics_thread.state.write()
+        {
+            for event in physics_thread.input_rx.try_iter()
             {
-                continue;
-            }
-            self.last_time = now;
-            if let Ok(mut player) = self.player.write()
-            {
-                for event in self.input_rx.try_iter()
+                match event
                 {
-                    match event
+                    InputEvent::MouseMotion { delta } => player.handle_mouse_movement(delta),
+                    InputEvent::Keyboard { code, pressed } =>
                     {
-                        InputEvent::MouseMotion { delta } => player.handle_mouse_movement(delta),
-                        InputEvent::Keyboard { code, pressed } =>
+                        player.handle_key(code, pressed);
+                        if pressed
                         {
-                            player.handle_key(code, pressed);
-                            if pressed
+                            match code
                             {
-                                match code
-                                {
-                                    KeyCode::BracketRight => scale *= 4,
-                                    KeyCode::BracketLeft => scale /= 4,
-                                    _ => (),
-                                };
-                                scale = scale.clamp(1, 4u32.pow(11));
-                                true
-                            }
-                            else
-                            {
-                                false
-                            }
+                                KeyCode::BracketRight => scale *= 4,
+                                KeyCode::BracketLeft => scale /= 4,
+                                _ => (),
+                            };
+                            scale = scale.clamp(1, 4u32.pow(11));
+                            true
                         }
-                        _ => false,
-                    };
-                }
-                let force = self.world.sample_force(*player.body.state.get_pos())
-                    / player.body.properties.mass;
-
-                player.body.state.add_acceleration(force);
-                player.update(self.dt);
-                player.body.state.velocity =
-                    player.body.state.velocity.lerp(&Vector3::zeros(), 0.1);
+                        else
+                        {
+                            false
+                        }
+                    }
+                    _ => false,
+                };
             }
+            let force = physics_thread
+                .internal_state
+                .1
+                .sample_force(*player.body.state.get_pos())
+                / player.body.properties.mass;
+
+            player.body.state.add_acceleration(force);
+            player.update(physics_thread.config);
+            player.body.state.velocity = player.body.state.velocity.lerp(&Vector3::zeros(), 0.1);
         }
     }
 }

@@ -17,10 +17,7 @@ use crate::{
         Model,
         TransformUniform,
     },
-    physics::{
-        physics_environment::ConstantForceField,
-        physics_sim::PhysicsSim,
-    },
+    physics::physics_sim::PhysicsSim,
     player::spaceship_controller::SpaceshipController,
     rendering::{
         camera::{
@@ -57,7 +54,6 @@ use rand::{
 };
 use std::{
     sync::Arc,
-    time::Duration,
     vec,
 };
 use wgpu::BindGroupLayout;
@@ -188,11 +184,7 @@ impl State
         let mut celestial_meshes = CelestialMeshContainer::new();
         celestial_meshes.add_planets(&celestial_bodies.bodies, &renderer);
 
-        let physics_sim = PhysicsSim::new(
-            Duration::from_secs_f32(1.0 / 180.0),
-            spaceship,
-            ConstantForceField::default(),
-        );
+        let physics_sim = PhysicsSim::new_physics_sim(spaceship);
 
         let spaceship_model = Model::new(
             vec![MeshBuffer::from_data(
@@ -364,7 +356,7 @@ impl State
 
     pub fn render(&mut self) -> Result<(), wgpu::SurfaceError>
     {
-        if let Some(player) = self.physics_sim.get_player()
+        if let Some(player) = self.physics_sim.get_state()
         {
             self.camera_controller.focus_body(&player);
             self.camera_uniform
@@ -426,7 +418,7 @@ impl State
         }
         else
         {
-            self.physics_sim.handle_input(&event);
+            self.physics_sim.send(event);
             if let InputEvent::MouseWheel { delta } = event
             {
                 self.camera_controller.handle_mouse_scroll(&delta);
