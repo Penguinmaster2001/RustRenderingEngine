@@ -1,8 +1,6 @@
-use std::println;
-
 use crate::chaos::maps::Map;
 use nalgebra::RealField;
-use rand::Rng;
+use std::println;
 
 
 
@@ -33,11 +31,11 @@ where
     {
         let mut terms = vec![];
         let mut exponents: Vec<usize> = vec![0usize; D + 1];
-        exponents[0] = max_order;
-        loop
-        {
-            let mut coefficient = nalgebra::SVector::zeros();
 
+        let mut coefficient = nalgebra::SVector::zeros();
+
+        if rng().abs() < T::from_usize(max_order).unwrap().recip()
+        {
             for c in 0..D
             {
                 coefficient[c] = rng();
@@ -47,7 +45,11 @@ where
                 exponents: *exponents[1..(D + 1)].as_array().unwrap(),
                 coefficient,
             });
+        }
 
+        exponents[0] = max_order;
+        loop
+        {
             let mut i = (D - 1) as i32;
             while i >= 0 && exponents[i as usize] == 0
             {
@@ -72,19 +74,24 @@ where
             {
                 exponents[j] = 0;
             }
-        }
-        let mut coefficient = nalgebra::SVector::zeros();
 
-        for c in 0..D
-        {
-            coefficient[c] = rng();
-        }
+            let current_order = max_order - exponents[0];
 
-        terms.push(PolynomialTerm {
-            exponents: *exponents[1..(D + 1)].as_array().unwrap(),
-            coefficient,
-        });
-        println!("{:?}", terms);
+            if rng().abs() < T::from_usize(current_order / 2).unwrap().recip()
+            {
+                let mut coefficient = nalgebra::SVector::zeros();
+                for c in 0..D
+                {
+                    coefficient[c] = rng() / (T::one() + T::one()).powi((current_order - 1) as _);
+                }
+
+                terms.push(PolynomialTerm {
+                    exponents: *exponents[1..(D + 1)].as_array().unwrap(),
+                    coefficient,
+                });
+            }
+        }
+        println!("{:?}\n\n", terms);
 
         Self { terms }
     }

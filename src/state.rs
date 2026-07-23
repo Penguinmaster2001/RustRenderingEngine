@@ -5,10 +5,7 @@ use crate::{
     },
     chaos::{
         ChaoticPoints,
-        maps::polynomial_maps::{
-            PolynomialMap,
-            PolynomialTerm,
-        },
+        maps::polynomial_maps::PolynomialMap,
     },
     input::{
         InputEvent,
@@ -75,7 +72,7 @@ use winit::{
 
 
 
-const DIM: usize = 2;
+const DIM: usize = 3;
 
 
 
@@ -108,8 +105,8 @@ impl State
         let [point_shader] = renderer.create_shaders(&[include_str!("point_shader.wgsl")]);
 
         let spaceship = SpaceshipController::new(InputSettings {
-            sensitivity: 0.005,
-            speed: 10.0,
+            sensitivity: 0.003,
+            speed: 5.0,
         });
 
         let camera_controller = CameraController::new(OrbitCamera::new(
@@ -122,8 +119,8 @@ impl State
         let projection = camera::Projection::new(
             renderer.config.width,
             renderer.config.height,
-            90.0 * math::DEG_TO_RAD as f32,
-            0.01,
+            75.0 * math::DEG_TO_RAD as f32,
+            0.001,
             100.0,
         );
 
@@ -222,27 +219,6 @@ impl State
             depth_texture,
         );
 
-        // let map = PolynomialMap {
-        //     terms: vec![
-        //         PolynomialTerm {
-        //             exponents: [0, 0],
-        //             coefficient: vector![1.0, 0.0],
-        //         },
-        //         PolynomialTerm {
-        //             exponents: [1, 0],
-        //             coefficient: vector![0.0, 1.0],
-        //         },
-        //         PolynomialTerm {
-        //             exponents: [2, 0],
-        //             coefficient: vector![-1.4, 0.0],
-        //         },
-        //         PolynomialTerm {
-        //             exponents: [0, 1],
-        //             coefficient: vector![0.3, 0.0],
-        //         },
-        //     ],
-        // };
-
         Ok(Self {
             frame_num: 0,
             camera_controller,
@@ -260,9 +236,9 @@ impl State
     fn new_chaos() -> ChaoticPoints<f32, PolynomialMap<f32, DIM>, DIM>
     {
         let mut rng = ThreadRng::default();
-        let map = PolynomialMap::new_random(|| rng.random_range(-0.5..0.5), 3);
+        let map = PolynomialMap::new_random(|| rng.random_range(-1.0..1.0), 4);
 
-        ChaoticPoints::from_point_grid(1.0f32, 25, map)
+        ChaoticPoints::from_point_grid(1.0f32, 10, map)
     }
 
 
@@ -401,23 +377,36 @@ impl State
             bytemuck::cast_slice(&[self.camera_uniform]),
         );
 
-        if self.points.get_iter_num() < 1000
+        if self.points.get_iter_num() < 500
         {
             self.points.step();
+
+            let mut count_within_bounds = 0;
 
             self.render_data.geometries[0].models[0].meshes[0] = MeshBuffer::from_points(
                 &self
                     .points
                     .points
                     .iter()
-                    .map(|p| ModelVertex {
-                        position: [p[0], p[1], 0.0],
-                        tex_coords: [0.0, 0.0],
-                        normal: [1.0, 0.0, 0.0],
+                    .map(|p| {
+                        if p.magnitude_squared() < 1000.0
+                        {
+                            count_within_bounds += 1;
+                        }
+                        ModelVertex {
+                            position: [p[0], p[1], if DIM >= 3 { p[2] } else { 0.0 }],
+                            tex_coords: [0.0, 0.0],
+                            normal: [1.0, 0.0, 0.0],
+                        }
                     })
                     .collect::<Vec<ModelVertex>>(),
                 &self.renderer,
             );
+
+            if (count_within_bounds as f32 / self.points.points.len() as f32) < 0.01
+            {
+                self.points = State::new_chaos();
+            }
         }
 
         self.frame_num += 1;
