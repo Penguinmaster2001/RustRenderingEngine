@@ -3,6 +3,7 @@ use std::{
         Arc,
         RwLock,
         RwLockReadGuard,
+        RwLockWriteGuard,
         mpsc,
     },
     thread,
@@ -53,9 +54,9 @@ impl<T: 'static + Send, S: 'static + Send + Sync> WorkerHandle<T, S>
 
 
 
-    pub fn get_state(&'_ self) -> Option<RwLockReadGuard<'_, S>>
+    pub fn get_state(&'_ self) -> Option<RwLockWriteGuard<'_, S>>
     {
-        self.state.read().ok()
+        self.state.write().ok()
     }
 }
 

@@ -48,7 +48,7 @@ impl InputHandler for CameraController<OrbitCamera>
             winit::event::MouseScrollDelta::PixelDelta(pos) => pos.y as f32,
         };
 
-        self.camera.distance = (self.camera.distance + (0.02 * -delta)).clamp(0.05, 30.0);
+        self.camera.distance = (self.camera.distance + (0.02 * -delta)).clamp(0.02, 30.0);
         true
     }
 }

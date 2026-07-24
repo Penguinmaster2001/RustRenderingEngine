@@ -346,8 +346,9 @@ impl State
 
     pub fn render(&mut self) -> Result<(), wgpu::SurfaceError>
     {
-        if let Some(player) = self.physics_sim.get_state()
+        if let Some(mut player) = self.physics_sim.get_state()
         {
+            player.input_settings.speed = 50.0 * self.camera_controller.camera.distance;
             self.camera_controller.focus_body(&player);
             self.camera_uniform
                 .update_view_proj(&self.camera_controller, &self.projection);

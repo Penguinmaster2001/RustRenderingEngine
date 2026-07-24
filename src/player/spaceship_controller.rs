@@ -29,7 +29,7 @@ pub struct SpaceshipController
     right: Unit<Vector3<f32>>,
     pub up: Unit<Vector3<f32>>,
     pub body: PhysicsBody,
-    input_settings: InputSettings,
+    pub input_settings: InputSettings,
 }
 
 
