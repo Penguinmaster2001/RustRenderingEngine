@@ -81,6 +81,7 @@ pub struct State
     physics_sim: PhysicsSim,
     camera_controller: CameraController<OrbitCamera>,
     pub renderer: Renderer,
+    cursor_locked: bool,
     points: ChaosHandle<f32, PolynomialMap<f32, DIM>, DIM>,
 }
 
@@ -91,7 +92,6 @@ impl State
     pub async fn new(window: Arc<Window>) -> anyhow::Result<Self>
     {
         let renderer = Renderer::new(window).await?;
-        renderer.window.set_cursor_grab(CursorGrabMode::Locked)?;
 
         let texture_bind_group_layout = State::create_texture_bind_group_layout(&renderer);
 
@@ -115,7 +115,7 @@ impl State
         let projection = camera::Projection::new(
             renderer.config.width,
             renderer.config.height,
-            75.0 * math::DEG_TO_RAD as f32,
+            50.0 * math::DEG_TO_RAD as f32,
             0.001,
             100.0,
         );
@@ -216,6 +216,7 @@ impl State
             points,
             physics_sim,
             renderer,
+            cursor_locked: false,
             projection,
             camera_uniform,
             render_data,
@@ -380,16 +381,26 @@ impl State
 
 
 
-    pub fn handle_input(&mut self, event_loop: &ActiveEventLoop, event: InputEvent)
+    pub fn handle_input(&mut self, _: &ActiveEventLoop, event: InputEvent)
     {
         if let InputEvent::Keyboard {
             code: KeyCode::Escape,
             pressed: true,
         } = event
         {
-            event_loop.exit();
+            #[expect(unused_must_use)]
+            if self.cursor_locked
+            {
+                self.cursor_locked = false;
+                self.renderer.window.set_cursor_grab(CursorGrabMode::None);
+            }
+            else
+            {
+                self.cursor_locked = true;
+                self.renderer.window.set_cursor_grab(CursorGrabMode::Locked);
+            }
         }
-        else
+        else if self.cursor_locked
         {
             self.physics_sim.send(event);
             if let InputEvent::MouseWheel { delta } = event

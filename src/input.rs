@@ -46,6 +46,13 @@ pub trait InputHandler
     {
         false
     }
+
+
+
+    fn handle_input(&mut self, _input: InputEvent) -> bool
+    {
+        false
+    }
 }
 
 
