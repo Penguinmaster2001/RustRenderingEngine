@@ -7,7 +7,6 @@ use rand::{
     Rng,
     rngs::ThreadRng,
 };
-use std::println;
 
 
 
@@ -96,7 +95,6 @@ where
                 coefficient,
             });
         }
-        println!("{:?}\n\n", terms);
 
         Self { terms }
     }
@@ -134,8 +132,8 @@ impl<const D: usize> ChaoticPolynomialMap<f32, D>
     pub fn new_chaotic_polynomial_map() -> Self
     {
         let mut rng = ThreadRng::default();
-        let map = PolynomialMap::new_random(|| rng.random_range(-1.5..1.5), 4);
+        let map = PolynomialMap::new_random(|| rng.random_range(-1.0..1.0), 3);
 
-        ChaoticPoints::from_point_grid(1.0f32, 10, map)
+        ChaoticPoints::from_point_grid(1.0f32, 25, map)
     }
 }

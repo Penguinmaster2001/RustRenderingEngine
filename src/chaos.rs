@@ -4,17 +4,20 @@ use nalgebra::RealField;
 
 
 pub mod chaos_thread;
+pub mod heuristics;
 pub mod maps;
 
 
 
 #[derive(Clone)]
-pub struct ChaosConfig<T, M, F, const D: usize>
+pub struct ChaosConfig<T, M, F, G, const D: usize>
 where
     F: FnMut() -> ChaoticPoints<T, M, D>,
+    G: FnMut(&Vec<nalgebra::SVector<T, D>>) -> bool,
 {
-    pub iterations: u32,
+    pub max_iterations: Option<u32>,
     pub points_generator: F,
+    pub chaos_heuristic: G,
 }
 
 

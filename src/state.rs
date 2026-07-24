@@ -5,6 +5,7 @@ use crate::{
             ChaosCommand,
             ChaosHandle,
         },
+        heuristics,
         maps::polynomial_maps::{
             ChaoticPolynomialMap,
             PolynomialMap,
@@ -204,8 +205,9 @@ impl State
         );
 
         let points = ChaosHandle::new_chaos_thread(ChaosConfig {
-            iterations: 5000,
+            max_iterations: None,
             points_generator: ChaoticPolynomialMap::new_chaotic_polynomial_map,
+            chaos_heuristic: |p| heuristics::not_divergent_or_collapsed(p, 0.2..200.0, 0.05),
         });
 
         Ok(Self {
@@ -358,30 +360,18 @@ impl State
 
         if let Some(points) = self.points.get_state()
         {
-            let mut count_within_bounds = 0;
             self.render_data.geometries[0].models[0].meshes[0] = MeshBuffer::from_points(
                 &points
                     .points
                     .iter()
-                    .map(|p| {
-                        if p.magnitude_squared() < 1000.0
-                        {
-                            count_within_bounds += 1;
-                        }
-                        ModelVertex {
-                            position: [p[0], p[1], if DIM >= 3 { p[2] } else { 0.0 }],
-                            tex_coords: [0.0, 0.0],
-                            normal: [1.0, 0.0, 0.0],
-                        }
+                    .map(|p| ModelVertex {
+                        position: [p[0], p[1], if DIM >= 3 { p[2] } else { 0.0 }],
+                        tex_coords: [0.0, 0.0],
+                        normal: [1.0, 0.0, 0.0],
                     })
-                    .collect::<Vec<ModelVertex>>(),
+                    .collect::<Vec<_>>(),
                 &self.renderer,
             );
-
-            if (count_within_bounds as f32 / points.points.len() as f32) < 0.01
-            {
-                self.points.send(ChaosCommand::CreateNew);
-            }
         }
 
         self.frame_num += 1;
