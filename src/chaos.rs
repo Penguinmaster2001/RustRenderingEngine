@@ -10,12 +10,14 @@ pub mod maps;
 
 
 #[derive(Clone)]
-pub struct ChaosConfig<T, M, F, G, const D: usize>
+pub struct ChaosConfig<T, M, F, G, P, const D: usize>
 where
-    F: FnMut() -> ChaoticPoints<T, M, D>,
+    F: FnMut(&P) -> ChaoticPoints<T, M, D>,
     G: FnMut(&Vec<nalgebra::SVector<T, D>>) -> bool,
 {
     pub max_iterations: Option<u32>,
+    pub search_config: P,
+    pub display_config: P,
     pub points_generator: F,
     pub chaos_heuristic: G,
 }

@@ -56,7 +56,7 @@ impl<T: 'static + Send, S: 'static + Send + Sync> WorkerHandle<T, S>
 
     pub fn get_state(&'_ self) -> Option<RwLockWriteGuard<'_, S>>
     {
-        self.state.write().ok()
+        self.state.try_write().ok()
     }
 }
 

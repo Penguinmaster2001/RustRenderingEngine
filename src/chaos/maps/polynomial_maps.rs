@@ -129,11 +129,11 @@ pub type ChaoticPolynomialMap<T, const D: usize> = ChaoticPoints<T, PolynomialMa
 
 impl<const D: usize> ChaoticPolynomialMap<f32, D>
 {
-    pub fn new_chaotic_polynomial_map() -> Self
+    pub fn new_chaotic_polynomial_map(&edge_num: &u16) -> Self
     {
         let mut rng = ThreadRng::default();
         let map = PolynomialMap::new_random(|| rng.random_range(-1.0..1.0), 3);
 
-        ChaoticPoints::from_point_grid(1.0f32, 25, map)
+        ChaoticPoints::from_point_grid(1.0f32, edge_num, map)
     }
 }

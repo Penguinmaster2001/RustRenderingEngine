@@ -206,6 +206,8 @@ impl State
 
         let points = ChaosHandle::new_chaos_thread(ChaosConfig {
             max_iterations: None,
+            search_config: 5,
+            display_config: 30,
             points_generator: ChaoticPolynomialMap::new_chaotic_polynomial_map,
             chaos_heuristic: |p| heuristics::not_divergent_or_collapsed(p, 0.2..200.0, 0.05),
         });

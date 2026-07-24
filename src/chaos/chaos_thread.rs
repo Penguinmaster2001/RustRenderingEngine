@@ -14,6 +14,7 @@ use crate::{
     },
 };
 use std::{
+    println,
     thread::sleep,
     time::Duration,
 };
@@ -31,8 +32,8 @@ pub enum ChaosCommand
 
 
 pub type ChaosHandle<T, M, const D: usize> = WorkerHandle<ChaosCommand, ChaoticPoints<T, M, D>>;
-pub type ChaosThread<T, M, F, G, const D: usize> =
-    WorkerThread<ChaosConfig<T, M, F, G, D>, ChaosCommand, ChaoticPoints<T, M, D>, RunState>;
+pub type ChaosThread<T, M, F, G, P, const D: usize> =
+    WorkerThread<ChaosConfig<T, M, F, G, P, D>, ChaosCommand, ChaoticPoints<T, M, D>, RunState>;
 
 
 
@@ -41,13 +42,14 @@ where
     T: 'static + Send + Sync,
     M: 'static + Send + Sync + Map<T, D>,
 {
-    pub fn new_chaos_thread<F, G>(config: ChaosConfig<T, M, F, G, D>) -> Self
+    pub fn new_chaos_thread<F, G, P>(config: ChaosConfig<T, M, F, G, P, D>) -> Self
     where
-        F: 'static + Send + FnMut() -> ChaoticPoints<T, M, D>,
+        P: 'static + Send + Sync + Copy,
+        F: 'static + Send + FnMut(&P) -> ChaoticPoints<T, M, D>,
         G: 'static + Send + FnMut(&Vec<nalgebra::SVector<T, D>>) -> bool,
     {
         let mut config = config;
-        let points = (config.points_generator)();
+        let points = (config.points_generator)(&config.search_config);
         WorkerHandle::new(config, points, RunState::Searching(0), run)
     }
 }
@@ -65,10 +67,10 @@ pub enum RunState
 
 
 
-fn run<T, M, F, G, const D: usize>(chaos_thread: ChaosThread<T, M, F, G, D>)
+fn run<T, M, F, G, P, const D: usize>(chaos_thread: ChaosThread<T, M, F, G, P, D>)
 where
     M: Map<T, D>,
-    F: FnMut() -> ChaoticPoints<T, M, D>,
+    F: FnMut(&P) -> ChaoticPoints<T, M, D>,
     G: FnMut(&Vec<nalgebra::SVector<T, D>>) -> bool,
 {
     let mut chaos_thread = chaos_thread;
@@ -95,11 +97,17 @@ where
                     if !(chaos_thread.config.chaos_heuristic)(&points.points)
                     {
                         chaos_thread.internal_state = Searching(0);
-                        points.copy_from((chaos_thread.config.points_generator)())
+                        points.copy_from((chaos_thread.config.points_generator)(
+                            &chaos_thread.config.search_config,
+                        ))
                     }
-                    else if iter_count > 200
+                    else if iter_count > 500
                     {
                         chaos_thread.internal_state = Displaying;
+                        points.points = (chaos_thread.config.points_generator)(
+                            &chaos_thread.config.display_config,
+                        )
+                        .points
                     }
                 }
                 RunState::Displaying => (),
@@ -114,11 +122,16 @@ where
                     ChaosCommand::CreateNew =>
                     {
                         chaos_thread.internal_state = Searching(0);
-                        points.copy_from((chaos_thread.config.points_generator)())
+                        points.copy_from((chaos_thread.config.points_generator)(
+                            &chaos_thread.config.search_config,
+                        ))
                     }
                     ChaosCommand::RestartCurrent =>
                     {
-                        points.points = (chaos_thread.config.points_generator)().points
+                        points.points = (chaos_thread.config.points_generator)(
+                            &chaos_thread.config.display_config,
+                        )
+                        .points
                     }
                     ChaosCommand::Pause =>
                     {
