@@ -397,11 +397,18 @@ impl State
                 self.camera_controller.handle_mouse_scroll(&delta);
             }
             else if let InputEvent::Keyboard {
-                code: KeyCode::KeyP,
+                code,
                 pressed: true,
             } = event
             {
-                self.points.send(ChaosCommand::CreateNew);
+                match code
+                {
+                    KeyCode::KeyP => self.points.send(ChaosCommand::CreateNew),
+                    KeyCode::KeyR => self.points.send(ChaosCommand::RestartCurrent),
+                    KeyCode::KeyK => self.points.send(ChaosCommand::Pause),
+                    KeyCode::KeyL => self.points.send(ChaosCommand::Step),
+                    _ => (),
+                }
             }
         }
     }

@@ -23,6 +23,9 @@ use std::{
 pub enum ChaosCommand
 {
     CreateNew,
+    RestartCurrent,
+    Pause,
+    Step,
 }
 
 
@@ -51,10 +54,13 @@ where
 
 
 
+#[derive(PartialEq)]
 pub enum RunState
 {
     Searching(u32),
     Displaying,
+    Paused,
+    Step,
 }
 
 
@@ -71,10 +77,11 @@ where
     {
         if let Ok(mut points) = chaos_thread.state.write()
         {
-            if chaos_thread
-                .config
-                .max_iterations
-                .is_none_or(|i| i < points.get_iter_num())
+            if chaos_thread.internal_state != RunState::Paused
+                && chaos_thread
+                    .config
+                    .max_iterations
+                    .is_none_or(|i| i < points.get_iter_num())
             {
                 points.step();
             }
@@ -93,24 +100,39 @@ where
                     else if iter_count > 200
                     {
                         chaos_thread.internal_state = Displaying;
-                        points.points = (chaos_thread.config.points_generator)().points;
-                        chaos_thread.input_rx.try_iter();
                     }
                 }
-                RunState::Displaying =>
+                RunState::Displaying => (),
+                RunState::Paused => (),
+                RunState::Step => chaos_thread.internal_state = RunState::Paused,
+            }
+
+            for event in chaos_thread.input_rx.try_iter()
+            {
+                match event
                 {
-                    for event in chaos_thread.input_rx.try_iter()
+                    ChaosCommand::CreateNew =>
                     {
-                        match event
-                        {
-                            ChaosCommand::CreateNew =>
-                            {
-                                chaos_thread.internal_state = Searching(0);
-                                points.copy_from((chaos_thread.config.points_generator)())
-                            }
-                        };
+                        chaos_thread.internal_state = Searching(0);
+                        points.copy_from((chaos_thread.config.points_generator)())
                     }
-                }
+                    ChaosCommand::RestartCurrent =>
+                    {
+                        points.points = (chaos_thread.config.points_generator)().points
+                    }
+                    ChaosCommand::Pause =>
+                    {
+                        if chaos_thread.internal_state == RunState::Paused
+                        {
+                            chaos_thread.internal_state = RunState::Displaying
+                        }
+                        else
+                        {
+                            chaos_thread.internal_state = RunState::Paused
+                        }
+                    }
+                    ChaosCommand::Step => chaos_thread.internal_state = RunState::Step,
+                };
             }
         }
         sleep(Duration::from_micros(100));
