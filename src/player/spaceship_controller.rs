@@ -76,7 +76,7 @@ impl SpaceshipController
             up_rotation.transform_vector(&right_rotation.transform_vector(&self.forward)),
         );
         self.up = Unit::new_normalize(up_rotation.transform_vector(&self.up));
-        self.right = Unit::new_normalize(right_rotation.transform_vector(&self.right));
+        self.right = Unit::new_normalize(self.forward.cross(&self.up));
 
         self.body.state.update(dt);
         self.controller.reset_rotation();

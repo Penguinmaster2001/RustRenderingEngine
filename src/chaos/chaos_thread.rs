@@ -14,7 +14,6 @@ use crate::{
     },
 };
 use std::{
-    println,
     thread::sleep,
     time::Duration,
 };

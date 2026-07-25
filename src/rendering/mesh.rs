@@ -1,5 +1,3 @@
-use std::println;
-
 use crate::{
     rendering::renderer::Renderer,
     vertex::Vertex,
